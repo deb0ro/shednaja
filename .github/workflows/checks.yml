@@ -13,13 +13,13 @@ jobs:
   checks:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: shellcheck (errors)
         run: |
           # every tracked shell script: by shebang, plus the sourced profile.d snippets
           git ls-files -z | while IFS= read -r -d '' f; do
-            [ -f "$f" ] && head -n 1 "$f" | grep -qE '^#!.*(/sh|bash)' && printf '%s\0' "$f"
+            if [ -f "$f" ] && head -n 1 "$f" | grep -qE '^#!.*(/sh|bash)'; then printf '%s\0' "$f"; fi
           done > scripts
           git ls-files -z 'rootfs/board/kobra_s1/overlay/etc/profile.d/*.sh' >> scripts
           xargs -0 shellcheck --severity=error < scripts
