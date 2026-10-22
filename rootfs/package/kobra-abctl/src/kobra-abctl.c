@@ -80,6 +80,9 @@ int main(int argc, char **argv)
 		else
 			dev = argv[i];
 	}
+	if (argc >= 2 && strcmp(argv[1], "now") && strcmp(argv[1], "other") &&
+	    strcmp(argv[1], "display"))
+		argc = 0;	/* unknown command */
 	if (argc < 2) {
 		fprintf(stderr, "usage: kobra-abctl now|other|display [--slot=a|b] [misc device/file]\n");
 		return 2;
@@ -114,13 +117,10 @@ int main(int argc, char **argv)
 		d[9 + 4 * cur] = TRIES;
 		d[10 + 4 * cur] = 0;
 		d[16] = cur;
-	} else if (!strcmp(argv[1], "other")) {
+	} else {	/* other */
 		int oth = !cur;
 		d[8 + 4 * oth] = 15; d[9 + 4 * oth] = TRIES; d[10 + 4 * oth] = 0;
 		d[8 + 4 * cur] = 14;
-	} else {
-		fprintf(stderr, "unknown command %s\n", argv[1]);
-		return 2;
 	}
 	put_be32(d + 28, crc32(d, 28));
 	if (memcmp(d, o, AB_SIZE)) {

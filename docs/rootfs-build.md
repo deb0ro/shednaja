@@ -138,6 +138,12 @@ target's own binaries:
 2. Moonraker starts and `/server/info` lists no failed components.
 3. lighttpd accepts its config and serves Mainsail, the proxy and the websocket upgrade.
 
+Without a build (also in CI, `.github/workflows/checks.yml`, on every push):
+`shellcheck --severity=error` on all shell scripts, Python syntax, `bash
+rootfs/package/kobra-abctl/test/unit_test.sh` (A/B data on hand-made misc images) and
+`python3 -m unittest discover -s rootfs/tests -p 'test_*.py'` (kobra_plr with stand-ins
+for Klipper).
+
 ## Size and RAM
 
 - `build/rootfs/manifest.txt` lists the size per package. The image is about 43 MiB of the

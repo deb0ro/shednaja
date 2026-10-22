@@ -1,0 +1,35 @@
+# Fast checks without a build, a printer or the stock firmware. The full system test is
+# rootfs/tests/offline_check.sh after a build (docs/rootfs-build.md).
+name: checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck (errors)
+        run: |
+          # every tracked shell script: by shebang, plus the sourced profile.d snippets
+          git ls-files -z | while IFS= read -r -d '' f; do
+            [ -f "$f" ] && head -n 1 "$f" | grep -qE '^#!.*(/sh|bash)' && printf '%s\0' "$f"
+          done > scripts
+          git ls-files -z 'rootfs/board/kobra_s1/overlay/etc/profile.d/*.sh' >> scripts
+          xargs -0 shellcheck --severity=error < scripts
+
+      - name: python syntax
+        run: git ls-files -z '*.py' rootfs/board/kobra_s1/overlay/usr/libexec/kobra/helix-defaults |
+          xargs -0 python3 -m py_compile
+
+      - name: kobra-abctl
+        run: bash rootfs/package/kobra-abctl/test/unit_test.sh
+
+      - name: kobra_plr
+        run: python3 -m unittest discover -s rootfs/tests -p 'test_*.py' -v

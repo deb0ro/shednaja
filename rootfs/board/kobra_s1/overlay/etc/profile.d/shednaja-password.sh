@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # ShedNaja: as long as root still has the image's default password ("rockchip", the same
 # on every printer), every interactive login warns and asks for a new one. Ctrl-C skips it
 # for this login. The image hash uses a fixed salt, so equal hashes mean the default.
