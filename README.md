@@ -77,9 +77,24 @@ ShedNaja never changes the stock slot, so stock keeps working as before.
 ## SSH and the root password
 
 - `ssh root@<printer IP>`, password: the stock one (`rockchip`).
-- **Change it** with `passwd`. It is stored on `/userdata` and survives updates. To reset
-  it to the default, delete `/userdata/shednaja/shadow` and reboot.
+- **Change it.** Every login asks for a new password until it is no longer the default
+  (Ctrl-C skips it once); `passwd` changes it later. It is stored on `/userdata` and
+  survives updates. To reset it to the default, delete `/userdata/shednaja/shadow` and
+  reboot.
 - SSH keys go into `/userdata/shednaja/ssh/authorized_keys`.
+
+### Security
+
+ShedNaja assumes a trusted home network, like a usual Klipper setup:
+- Mainsail / Moonraker (ports 80 and 7125) have no login. Every client from a private
+  address range (`10.x`, `172.16-31.x`, `192.168.x`, link-local) has full control:
+  printing, macros, config files, reboot. Moonraker runs as root. Do not expose the
+  printer to the internet or to a guest network; limit `trusted_clients` in
+  `moonraker.conf` if your network is shared.
+- SSH accepts root with a password; with the default password anyone on the network is
+  root on the printer.
+- Update bundles and the installer are not signed. Whoever can plug in a USB stick or log
+  in as root can install any system, as with the stock firmware.
 
 ## Updating
 

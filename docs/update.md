@@ -42,6 +42,10 @@ pack only some images. Partitions that already hold exactly the
 bundle's image are skipped on the printer, so a full bundle is fine even when only the
 rootfs changed.
 
+Bundles are not signed: the sha256 sums in the manifest catch damaged files, not
+modified ones. Anyone who can run `kobra-update` as root or plug a USB stick into the
+printer can install any system, as with the stock firmware's USB updater.
+
 ## Installing
 
 **Over SSH:**

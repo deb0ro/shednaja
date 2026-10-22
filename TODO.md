@@ -12,8 +12,9 @@
 - Announcement post (why, what works, what does not; README.md has the facts).
 - The README's apt package list on a fresh Linux install (the clean-clone build of
   2026-10-22 ran in a WSL that already had every package).
-- Root password: a release could force a password change on first login (now the stock
-  default `rockchip` stays until the owner runs `passwd`).
+- Root password: every interactive login asks for a new one while it is the default
+  `rockchip` (`/etc/profile.d/shednaja-password.sh`); non-interactive SSH (scp, commands)
+  and the web UI do not. A per-printer password (shown on the display) would close it.
 
 ## Open items
 
