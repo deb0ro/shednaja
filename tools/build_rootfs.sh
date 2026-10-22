@@ -17,7 +17,8 @@
 # Output: build/rootfs/rootfs.squashfs (+ manifest, size report). Nothing is flashed.
 #
 # Environment overrides: SDK_DIR, BT_DIR, BR_OUT (~/kobra/rootfs-out), BR_DL (~/kobra/br-dl),
-#   JOBS, CLEAN=1 (wipe BR_OUT first), SSH_KEY.
+#   JOBS, CLEAN=1 (wipe BR_OUT first), SSH_KEY, ALLOW_UNPINNED=1 (build even if the SDK
+#   checkout is not at its pinned commit; the build id gets "+unpinned").
 set -euo pipefail
 
 case "$(uname -s)" in
@@ -25,7 +26,7 @@ case "$(uname -s)" in
     here=$(cd "$(dirname "$0")/.." && pwd)
     wpath="/mnt/$(echo "${here:1:1}" | tr 'A-Z' 'a-z')${here:2}"
     # Git Bash variables do not reach WSL: pass the overrides explicitly
-    envs=(); for v in CLEAN JOBS SDK_DIR BT_DIR BR_OUT BR_DL SSH_KEY; do [ -n "${!v:-}" ] && envs+=("$v=${!v}"); done
+    envs=(); for v in CLEAN JOBS SDK_DIR BT_DIR BR_OUT BR_DL SSH_KEY ALLOW_UNPINNED; do [ -n "${!v:-}" ] && envs+=("$v=${!v}"); done
     MSYS_NO_PATHCONV=1 exec wsl -d Ubuntu-24.04 -- env "${envs[@]}" bash "$wpath/tools/build_rootfs.sh" "$@" ;;
 esac
 
@@ -46,10 +47,22 @@ KREL=5.10.160
 SYSTEM_PART_BYTES=$((48 * 1024 * 1024))                 # system_a/system_b
 IN=$HOME/kobra/rootfs-in
 log() { printf '\n=== %s\n' "$*"; }
+# A source checkout must be at its pin; ALLOW_UNPINNED=1 lets a development build go on
+pin_check() {	# pin_check <name> <dir> <commit>
+  local head; head=$(git -C "$2" rev-parse HEAD)
+  [ "$head" = "$3" ] && return 0
+  if [ "${ALLOW_UNPINNED:-0}" = 1 ]; then
+    echo "WARNING: $1 is at $head, expected $3 (ALLOW_UNPINNED=1)"; UNPINNED=1; return 0
+  fi
+  echo "$1 in $2 is at $head, expected $3:"
+  echo "  git -C $2 checkout $3    (or ALLOW_UNPINNED=1 for a development build)"
+  exit 1
+}
+UNPINNED=0
 
 # ---- 1. sources --------------------------------------------------------------
 [ -d "$SDK_DIR/.git" ] || { echo "no SDK at $SDK_DIR - run tools/build_kernel.sh first"; exit 1; }
-[ "$(git -C "$SDK_DIR" rev-parse HEAD)" = "$SDK_COMMIT" ] || echo "WARNING: SDK is not at $SDK_COMMIT"
+pin_check "Luckfox Pico SDK" "$SDK_DIR" "$SDK_COMMIT"
 BR_TGZ=$SDK_DIR/sysdrv/tools/board/buildroot/$BR_VER.tar.gz
 if [ ! -f "$BR_TGZ" ]; then
   log "adding sysdrv/tools/board/buildroot to the SDK sparse checkout"
@@ -74,6 +87,9 @@ git -C "$BT_DIR" checkout -q "$BT_COMMIT"
 # ---- 2. inputs from the repo / dumps ------------------------------------------
 MOD_TAR=$ROOT/build/kernel/modules-$KREL.tar.gz
 [ -f "$MOD_TAR" ] || { echo "missing $MOD_TAR - run tools/build_kernel.sh first"; exit 1; }
+if [ -f "$ROOT/build/kernel/UNPINNED" ]; then
+  echo "WARNING: build/kernel comes from an unpinned kernel build (ALLOW_UNPINNED=1)"; UNPINNED=1
+fi
 tar -tzf "$MOD_TAR" "lib/modules/$KREL/extra/RTL8723DS.ko" "lib/modules/$KREL/extra/hci_uart.ko" >/dev/null
 PUBKEY=""
 if [ -n "${SSH_KEY:-}" ]; then
@@ -100,6 +116,7 @@ export KOBRA_VERSION=0.1
 export KOBRA_BUILD_ID=$(git -C "$ROOT" describe --always --dirty 2>/dev/null || echo unknown)
 # a developer's key in the image must never look like a release
 [ -n "$PUBKEY" ] && KOBRA_BUILD_ID=$KOBRA_BUILD_ID+devkey
+[ "$UNPINNED" = 1 ] && KOBRA_BUILD_ID=$KOBRA_BUILD_ID+unpinned
 unset ARCH CROSS_COMPILE PERL_MM_OPT
 # Buildroot refuses a PATH with spaces/current dir (WSL appends the Windows PATH)
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

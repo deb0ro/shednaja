@@ -19,6 +19,9 @@ bash tools/build_oem_ours.sh          # optional, development: stock oem + our m
   objects go to `~/kobra/kernel-out` (on the Linux filesystem, `/mnt/d` would be slow).
 - Environment: `SDK_DIR`, `KOUT`, `TEMPLATE` (default `build/stock/boot.img`), `JOBS`,
   `CLEAN=1`.
+- The SDK and rkwifibt checkouts must be at their pinned commits, otherwise the build stops;
+  `ALLOW_UNPINNED=1` builds anyway (development only; the rootfs build id then gets
+  `+unpinned`).
 - Needs git, make, gcc, bc, bison, flex, libssl-dev, python3, patch. No sudo, no host `dtc`
   or `mkimage`.
 - Reproducible: timestamp (SDK commit date), user/host, `LOCALVERSION` and the `#N` build

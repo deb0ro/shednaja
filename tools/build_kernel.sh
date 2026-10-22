@@ -18,6 +18,7 @@
 #   TEMPLATE  stock boot.img for FIT   (default build/stock/boot.img, tools/fetch_stock.sh)
 #   JOBS      parallel jobs            (default nproc)
 #   CLEAN=1   wipe KOUT first
+#   ALLOW_UNPINNED=1  build even if the SDK / rkwifibt checkout is not at its pinned commit
 set -euo pipefail
 
 # Started from Git Bash on Windows -> re-run inside WSL
@@ -26,7 +27,7 @@ case "$(uname -s)" in
     here=$(cd "$(dirname "$0")/.." && pwd)
     wpath="/mnt/$(echo "${here:1:1}" | tr 'A-Z' 'a-z')${here:2}"
     # Git Bash variables do not reach WSL: pass the overrides explicitly
-    envs=(); for v in CLEAN JOBS SDK_DIR BT_DIR KOUT TEMPLATE; do [ -n "${!v:-}" ] && envs+=("$v=${!v}"); done
+    envs=(); for v in CLEAN JOBS SDK_DIR BT_DIR KOUT TEMPLATE ALLOW_UNPINNED; do [ -n "${!v:-}" ] && envs+=("$v=${!v}"); done
     MSYS_NO_PATHCONV=1 exec wsl -d Ubuntu-24.04 -- env "${envs[@]}" bash "$wpath/tools/build_kernel.sh" "$@" ;;
 esac
 
@@ -52,6 +53,19 @@ CROSS=arm-rockchip830-linux-uclibcgnueabihf-
 log() { printf '\n=== %s\n' "$*"; }
 
 # ---- 1. SDK (kernel + toolchain only) --------------------------------------
+# A source checkout must be at its pin; ALLOW_UNPINNED=1 lets a development build go on
+pin_check() {	# pin_check <name> <dir> <commit>
+  local head; head=$(git -C "$2" rev-parse HEAD)
+  [ "$head" = "$3" ] && return 0
+  if [ "${ALLOW_UNPINNED:-0}" = 1 ]; then
+    echo "WARNING: $1 is at $head, expected $3 (ALLOW_UNPINNED=1)"; UNPINNED=1; return 0
+  fi
+  echo "$1 in $2 is at $head, expected $3:"
+  echo "  git -C $2 checkout $3    (or ALLOW_UNPINNED=1 for a development build)"
+  exit 1
+}
+UNPINNED=0
+
 if [ ! -f "$KSRC/Makefile" ]; then
   log "fetching Luckfox Pico SDK $SDK_COMMIT (kernel + toolchain, ~2 GB)"
   mkdir -p "$(dirname "$SDK_DIR")"
@@ -69,9 +83,8 @@ if [ ! -f "$BT_DIR/drivers/bluetooth_uart_driver/hci_ldisc.c" ]; then
   git -C "$BT_DIR" sparse-checkout set drivers/bluetooth_uart_driver
   git -C "$BT_DIR" checkout -q "$BT_COMMIT"
 fi
-[ "$(git -C "$BT_DIR" rev-parse HEAD)" = "$BT_COMMIT" ] || echo "WARNING: rkwifibt is not at $BT_COMMIT"
-head=$(git -C "$SDK_DIR" rev-parse HEAD)
-[ "$head" = "$SDK_COMMIT" ] || echo "WARNING: SDK is at $head, expected $SDK_COMMIT"
+pin_check rkwifibt "$BT_DIR" "$BT_COMMIT"
+pin_check "Luckfox Pico SDK" "$SDK_DIR" "$SDK_COMMIT"
 export PATH=$TC:$PATH
 "${CROSS}gcc" --version | head -1
 
@@ -182,4 +195,6 @@ if [ -f "$STOCK_DTB" ]; then
 fi
 
 (cd "$OUT" && sha256sum zImage "$DTS_NAME.dtb" boot.img "modules-$rel.tar.gz" oem-ko/*.ko | tee SHA256SUMS)
+# tools/build_rootfs.sh marks its build id "+unpinned" when this file is there
+if [ "$UNPINNED" = 1 ]; then touch "$OUT/UNPINNED"; else rm -f "$OUT/UNPINNED"; fi
 echo "done: $OUT/boot.img  (kernel $rel, $(stat -c %s "$OUT/boot.img") B, boot partition 16 MiB)"

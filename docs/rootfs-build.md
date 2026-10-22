@@ -23,6 +23,9 @@ bash rootfs/tests/offline_check.sh    # optional, see "Offline checks"
   package when only its options change.
 - Environment: `SDK_DIR`, `BT_DIR`, `BR_OUT` (default `~/kobra/rootfs-out`), `BR_DL`,
   `STOCK` (default `build/stock`), `JOBS`, `CLEAN=1`.
+- The SDK checkout must be at the pinned commit, otherwise the build stops.
+  `ALLOW_UNPINNED=1` builds anyway and appends `+unpinned` to the build id (also when
+  `build/kernel` comes from such a kernel build). **Not for releases.**
 - `SSH_KEY=<file.pub>` bakes that key into root's `authorized_keys` and appends `+devkey` to
   the build id (and the update bundle name). **For development only, never release such a
   build.** Without it (a release build) root's keys live in `/userdata/shednaja/ssh`.
