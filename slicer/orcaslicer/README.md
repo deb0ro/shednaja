@@ -7,20 +7,15 @@ and purges a second time. ShedNaja uses plain Klipper macros instead: `PRINT_STA
 `PRINT_END` in `kobra_macros.cfg`; `M420`/`M601`/`G9111` do not exist, and the layer
 number never reached Klipper.
 
-## Based on
+## Profile
 
-The ShedNaja profile is made from **MPC561's Kobra S1 OrcaSlicer profiles**
-([MPC561/Anycubic-Kobra-S1-Orcaslicer-Profiles](https://github.com/MPC561/Anycubic-Kobra-S1-Orcaslicer-Profiles),
-bundle "Anycubic Kobra S1 0.4 nozzle - MPC561 - New Startcode 2.0"): PETG, ABS, ASA and PLA
-filament presets and 0.08–0.24 mm Standard / Medium / Structural process presets, which MPC561
-based on the Prusa MK4S profiles. They inherit from OrcaSlicer's built-in
-"Anycubic Kobra S1 0.4 nozzle" system profiles. ShedNaja changes only the printer preset's
-G-code (below); filament and process settings are MPC561's.
+Import [`Kobra S1 ShedNaja 0.4 nozzle.orca_printer`](Kobra%20S1%20ShedNaja%200.4%20nozzle.orca_printer)
+in OrcaSlicer with File > Import > Import Configs. It adds the printer preset
+"Kobra S1 ShedNaja 0.4 nozzle" with PETG, ABS, ASA and PLA filament presets and
+0.08–0.24 mm Standard / Medium / Structural process presets (names end in " - ShedNaja").
 
-MPC561's repository has no licence, so the converted bundle is not published here. Download
-their bundle and convert it yourself. MPC561's "New Startcode 2.0" needs their enhanced
-nozzle wiper; the ShedNaja printer preset replaces that start code with `PRINT_START`, which
-uses the stock wiper.
+Based on MPC561's work: [MPC561/Anycubic-Kobra-S1-Orcaslicer-Profiles](https://github.com/MPC561/Anycubic-Kobra-S1-Orcaslicer-Profiles)
+("New Startcode 2.0"), with the printer preset's G-code replaced for ShedNaja (below).
 
 ## Converting
 
@@ -31,8 +26,8 @@ everything else (machine limits, retraction, all filament and process presets):
 python tools/make_orca_bundle.py "<exported>.orca_printer"
 ```
 
-Use MPC561's `.orca_printer` file directly, or export your own: printer preset > Export >
-"Printer config bundle". The result is
+To convert another bundle, export it in OrcaSlicer: printer preset > Export > "Printer
+config bundle". The result is
 `build/slicer/Kobra S1 ShedNaja 0.4 nozzle.orca_printer`; import it with File > Import > Import
 Configs. The printer preset is named "Kobra S1 ShedNaja 0.4 nozzle", and the `rename` pairs in
 `printer_overrides.json` rename the filament and process presets (" - MPC561" becomes
