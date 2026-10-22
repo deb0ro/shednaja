@@ -56,6 +56,11 @@ STAGE=$UPD/stage
 LOG=$UPD/last-update.log
 log() { echo "kobra-update: $*"; echo "$(date '+%F %T') $*" >> "$LOG"; echo "kobra-update: $*" > /dev/kmsg 2>/dev/null || true; }
 die() { log "ERROR: $*"; exit 1; }
+# The staged images (tens of MB on /useremain) go when this run ends without handing them
+# over; only the ones this run unpacked, never those of a running or handed-over update.
+OWN_STAGE=0
+trap '[ "$OWN_STAGE" = 1 ] && rm -rf "$STAGE"' EXIT
+trap 'exit 130' INT TERM HUP
 
 mountpoint -q /useremain || die "/useremain not mounted"
 mkdir -p "$UPD"
@@ -67,7 +72,7 @@ S=$(/usr/libexec/kobra/current-slot)
 
 # ---- unpack and verify ------------------------------------------------------------
 log "bundle $BUNDLE ($(wc -c < "$BUNDLE") B)"
-rm -rf "$STAGE"; mkdir -p "$STAGE"
+OWN_STAGE=1; rm -rf "$STAGE"; mkdir -p "$STAGE"
 tar -xf "$BUNDLE" -C "$STAGE" || die "cannot unpack bundle"
 M=$STAGE/manifest
 [ -f "$M" ] || die "bundle has no manifest"
@@ -135,6 +140,7 @@ fi
 
 # ---- hand over to init: shutdown, then PID 1 in RAM writes our slot ----------------
 grep -q '^::restart:/usr/libexec/kobra/update-stage2' /etc/inittab || die "this rootfs has no update stage 2"
+OWN_STAGE=0	# from here on the staged images belong to stage 2
 {
 	echo "PLAN=$PLAN"
 	echo "SLOT=$S"
