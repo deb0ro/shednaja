@@ -72,7 +72,8 @@ class KobraSlot:
             return
         self.gcode.respond_raw("// action:prompt_end")
         try:
-            out = subprocess.check_output([ABCTL, 'other'], stderr=subprocess.STDOUT)
+            out = subprocess.check_output([ABCTL, 'other', '--slot=' + self.slot.lower()],
+                                          stderr=subprocess.STDOUT)
         except (OSError, subprocess.CalledProcessError) as e:
             raise gcmd.error("_REBOOT_TO_STOCK: kobra-abctl failed: %s" % (e,))
         logging.info("kobra_slot: %s", out.decode(errors='replace').strip())

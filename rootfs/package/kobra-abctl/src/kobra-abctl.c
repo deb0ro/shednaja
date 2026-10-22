@@ -16,6 +16,11 @@
  *         successful 0; the current slot only drops to priority 14 (its tries and
  *         successful flag stay) -> SPL boots the other slot next.
  *   display: print the state.
+ * --slot=a|b names the slot this system really runs from (/proc/cmdline) instead.
+ * Without it the current slot is the one with the highest priority, which is wrong after
+ * an SPL fallback (the higher slot ran out of tries and we run from the lower one):
+ * "now" would re-arm the failing slot, so SPL tries it again, and "other" would select
+ * the slot we run from instead of the other one.
  * The file is only rewritten when something changes.
  */
 #include <errno.h>
@@ -61,16 +66,26 @@ static void show(const uint8_t *d)
 
 int main(int argc, char **argv)
 {
-	const char *dev = MISC_DEV;
+	const char *dev = NULL;
 	uint8_t d[AB_SIZE], o[AB_SIZE];
-	int fd, cur;
+	int fd, cur, slot = -1;
 
-	if (argc < 2 || argc > 3) {
-		fprintf(stderr, "usage: %s now|other|display [misc device/file]\n", argv[0]);
+	for (int i = 2; i < argc; i++) {
+		if (!strcmp(argv[i], "--slot=a"))
+			slot = 0;
+		else if (!strcmp(argv[i], "--slot=b"))
+			slot = 1;
+		else if (!strncmp(argv[i], "--", 2) || dev)
+			argc = 0;	/* unknown option or a second device: usage */
+		else
+			dev = argv[i];
+	}
+	if (argc < 2) {
+		fprintf(stderr, "usage: kobra-abctl now|other|display [--slot=a|b] [misc device/file]\n");
 		return 2;
 	}
-	if (argc == 3)
-		dev = argv[2];
+	if (!dev)
+		dev = MISC_DEV;
 	fd = open(dev, strcmp(argv[1], "display") ? O_RDWR : O_RDONLY);
 	if (fd < 0 || pread(fd, d, AB_SIZE, AB_OFFSET) != AB_SIZE) {
 		fprintf(stderr, "%s: %s\n", dev, strerror(errno));
@@ -85,11 +100,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	memcpy(o, d, AB_SIZE);
-	cur = d[12] > d[8] ? 1 : 0;	/* highest priority = slot SPL boots */
+	if (slot >= 0)
+		cur = slot;
+	else
+		cur = d[12] > d[8] ? 1 : 0;	/* highest priority = slot SPL boots */
 
 	if (!strcmp(argv[1], "display")) {
 		show(d);
-		printf("current (highest priority): %c\n", 'a' + cur);
+		printf("current (%s): %c\n", slot >= 0 ? "--slot" : "highest priority",
+		       'a' + cur);
 		return 0;
 	} else if (!strcmp(argv[1], "now")) {
 		d[9 + 4 * cur] = TRIES;

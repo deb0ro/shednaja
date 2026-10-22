@@ -105,7 +105,7 @@ ShedNaja after `REBOOT_TO_STOCK`.
 7. `update-writer` (PID 1 in the chroot) writes each partition with `dd conv=fsync`, drops
    the page cache and compares the sha256 read back from the eMMC (one retry). All OK: saves
    the manifest as `installed.manifest`. Any failure: switches the A/B metadata to the
-   other slot (stock) with `kobra-abctl other`. Then `reboot -f`. PID 1 never exits on an error path.
+   other slot (stock) with `kobra-abctl other --slot=<our slot>`. Then `reboot -f`. PID 1 never exits on an error path.
 
 Log: `/useremain/shednaja/update/last-update.log` (also on the console and in `dmesg`).
 `trace.log` next to it records the handover milestones with uptime (handover, `rcS`
@@ -150,7 +150,9 @@ added by hand.
 How the fallback works: SPL boots the slot with the highest priority and counts its
 `tries_remaining` down (7). `S99kobra-bootok`, the last init script, marks the boot good and
 re-arms the 7 tries. A slot that never gets that far runs out of tries and SPL boots the
-other slot (stock).
+other slot (stock). ShedNaja re-arms the slot it runs from (`kobra-abctl now --slot=`, slot
+from `/proc/cmdline`), so after a fallback to ShedNaja the failed stock slot is not tried
+again; stock's own `rk_ota` re-arms the highest-priority slot, the failed one included.
 
 - **Kernel panic or hang before `S99kobra-bootok`:** the board does **not** reboot by itself
   (a panic hangs it, `panic=5` notwithstanding). Power-cycle the printer; each power cycle

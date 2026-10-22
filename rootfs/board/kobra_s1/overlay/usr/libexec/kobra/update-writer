@@ -41,7 +41,8 @@ for item in $PLAN; do
 	if [ $ok = 1 ]; then log "  ${part}_$SLOT written and verified"; else FAIL=1; log "  ${part}_$SLOT FAILED"; break; fi
 done
 if [ $FAIL = 1 ]; then
-	kobra-abctl other >> $LOG 2>&1
+	# from the slot we run from ($SLOT, not the highest priority): the other one is stock
+	case "$SLOT" in a|b) kobra-abctl other --slot=$SLOT >> $LOG 2>&1 ;; *) kobra-abctl other >> $LOG 2>&1 ;; esac
 	log "update FAILED - switched to the other slot (stock) for the next boot"
 	zcat /failed.fb.gz > /dev/fb0 2>/dev/null
 else
