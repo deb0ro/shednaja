@@ -30,6 +30,7 @@
 #          cannot be read while Klipper runs
 # One update at a time: a lock on /useremain/shednaja/update/.lock, and nothing new starts
 # while an update is pending (handed over, waiting for the shutdown).
+# The bundle may only hold manifest and <part>.img, as plain files.
 # Manifest lines are checked strictly (fixed image names <part>.img, numeric size,
 # 64-digit sha256), so nothing from the bundle ends up in the plan for stage 2 unchecked.
 set -eu
@@ -73,7 +74,21 @@ S=$(/usr/libexec/kobra/current-slot)
 # ---- unpack and verify ------------------------------------------------------------
 log "bundle $BUNDLE ($(wc -c < "$BUNDLE") B)"
 OWN_STAGE=1; rm -rf "$STAGE"; mkdir -p "$STAGE"
-tar -xf "$BUNDLE" -C "$STAGE" || die "cannot unpack bundle"
+# Only the expected members, each once and as a plain file: no paths, links or devices
+# from the bundle end up in /useremain.
+set -f	# member names are not globs
+NAMES=$(tar -tf "$BUNDLE") || die "cannot read bundle"
+for n in $NAMES; do
+	case "$n" in manifest|boot.img|oem.img|system.img) ;; *) die "unexpected file in bundle: $n" ;; esac
+done
+[ -z "$(echo "$NAMES" | sort | uniq -d)" ] || die "a file is in the bundle twice"
+tar -xf "$BUNDLE" -C "$STAGE" $NAMES || die "cannot unpack bundle"
+for n in $NAMES; do
+	set -- $(ls -ldn "$STAGE/$n")
+	case "$1" in -*) ;; *) die "$n in the bundle is not a regular file" ;; esac
+	[ "$2" = 1 ] || die "$n in the bundle is a hard link"
+done
+set +f
 M=$STAGE/manifest
 [ -f "$M" ] || die "bundle has no manifest"
 grep -qx 'format=1' "$M" || die "unsupported bundle format"

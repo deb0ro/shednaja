@@ -84,7 +84,8 @@ ShedNaja after `REBOOT_TO_STOCK`.
 2. Unpacks the bundle to `/useremain/shednaja/update/stage`, checks format, sizes, sha256 of
    every image and that it fits its partition; skips images identical to the partition.
    Manifest lines are strict: images must be named `<part>.img`, sizes numeric, sha256 64
-   hex digits, each partition once. If the update stops before the handover (a failed
+   hex digits, each partition once. The bundle may only hold `manifest` and `<part>.img`,
+   each once and as plain files (no paths, links or devices). If the update stops before the handover (a failed
    check, no confirmation, Ctrl-C), the unpacked images are removed again.
 3. Printer must be idle: with Klipper not running (USB update at boot) nothing can print;
    with Klipper running the Moonraker print state must be readable and not `printing` /
