@@ -67,6 +67,7 @@ plug it into the printer running stock. The stock `channel.sh` unpacks it to
 `/useremain/update_swu` and runs `swu/shednaja_install/update.sh`, which requires a complete
 bundle (boot and system, so a first install never leaves a mix of stock and ShedNaja;
 `tools/make_install_swu.sh` refuses partial bundles too; oem only if the bundle has one),
+logs a warning if stock is not 2.7.2.7 (`/useremain/dev/version`; it installs anyway),
 checks the images (md5, stock busybox has no sha256sum), writes the ones that differ into the partitions of
 the slot stock is not running from (`root=` p8 → slot B, p9 → slot A) with readback,
 writes `installed.manifest`, switches to that slot with `rk_ota --misc=other --mode=retry`,

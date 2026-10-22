@@ -40,6 +40,15 @@ case "$root" in
     *) fail "unknown root partition p$root" ;;
 esac
 echo "stock runs from root=p$root - installing into slot $T"
+# Only stock 2.7.2.7 (and its MCU firmware) is tested; others are installed with a warning.
+# The stock firmware keeps its version in /useremain/dev/version.
+TESTED_STOCK=2.7.2.7
+stock=$(tr -d ' \r\n' 2>/dev/null < /useremain/dev/version)
+if [ "$stock" = "$TESTED_STOCK" ]; then
+    echo "stock firmware $stock"
+else
+    echo "WARNING: stock firmware ${stock:-unknown}, ShedNaja is tested with $TESTED_STOCK only"
+fi
 command -v rk_ota >/dev/null || fail "rk_ota missing"
 
 # manifest: "image <part> <file> <size> <sha256>", md5sums: "<md5>  <file>" (stock busybox
