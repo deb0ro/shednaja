@@ -1,0 +1,35 @@
+# TODO
+
+## Before going public
+
+- Rename the local repository folder (still `KobraS1_` + the old name) and pick the
+  remote name `shednaja`. The project itself is renamed to ShedNaja (2026-10-22).
+- External review (EXT_REVIEW.txt), still open before a community alpha:
+  - one complete, tested install path for the supported stock firmware and MCU versions,
+    including a tested restore; ShedNaja in slot A is not tested yet
+  - long tests: runout during a print, insert and resume, unload, cancel, a long print with
+    the display and the camera in use (CPU load)
+  - MCU: stock v1.4.3 is the default; v2.0.13 (CS1237 calibration port) stays an optional
+    experiment for the toolhead MCU only, its flow/PA calibration is not verified
+- Release images: `oem_ours.img` is the stock oem image with three modules replaced, so a
+  published installer redistributes Anycubic/Rockchip userspace. Either ship only the
+  build (users run `tools/fetch_stock.sh`), or get the oem content cleared / rebuild it
+  from sources. Same question for the stock BT firmware in the rootfs.
+- Announcement post (why, what works, what does not; README.md has the facts).
+- A full build on a clean machine from the public repository (fetch_stock, kernel, oem,
+  rootfs, installer), to catch missing host packages in the README list.
+- Root password: a release could force a password change on first login (now the stock
+  default `rockchip` stays until the owner runs `passwd`).
+
+## Open items
+
+- Config files on installed printers: `printer-data-init` only adds missing files, so new
+  sections in `kobra_*.cfg` (e.g. `[kobra_slot]`) do not reach printers that are already
+  set up. Split shipped config (read-only, updated with the image) from user config.
+- Maskrom: test whether SW1 on the upper board pulls SARADC_IN0 low (read
+  `in_voltage0_raw` while pressing it), find the RV1106 USB OTG lines (the SoC USB goes
+  through the GL850G hub; "USB" test pads on the back of the upper board).
+- ACE Pro: driver (`kobra-acepro`, inactive), T0-T3 macros, Spoolman per slot.
+- A/B update variant with our system in both slots.
+- Printing: Z-offset fine tuning, flow and pressure advance calibration, runout test
+  during a print, UNLOAD_FILAMENT test, back-left bed corner (about 0.87 mm low).

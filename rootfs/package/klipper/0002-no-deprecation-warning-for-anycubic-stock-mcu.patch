@@ -1,0 +1,22 @@
+configfile: no deprecation warning for the Anycubic stock MCU firmware
+
+ShedNaja runs the Anycubic stock MCU firmware v1.4.3 on purpose (no reflash).
+It lacks STEPPER_STEP_BOTH_EDGE, which klippy reports as "deprecated code ...
+Recompiling and flashing is recommended" on every start. Log it instead.
+
+--- a/klippy/configfile.py
++++ b/klippy/configfile.py
+@@ -531,6 +531,13 @@
+         self._add_deprecated(res)
+     def deprecate_mcu_code(self, mcu, feature, msg=None):
+         mcu_name = mcu.get_name()
++        # Kobra S1: the Anycubic stock MCU firmware (v1.x) is the supported default and is
++        # not reflashed, so its older protocol (e.g. no STEPPER_STEP_BOTH_EDGE) is logged,
++        # not reported as a warning that asks to recompile and flash
++        if mcu.get_status()['mcu_version'].strip('"').startswith('v1.'):
++            logging.info("MCU '%s' (Anycubic stock firmware %s) lacks feature '%s'",
++                         mcu_name, mcu.get_status()['mcu_version'], feature)
++            return
+         if msg is None:
+             vhost = self.printer.start_args['software_version']
+             vmcu = mcu.get_status()['mcu_version']

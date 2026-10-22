@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# RTL8723DS Bluetooth exactly like stock S98_bluetooth_connect: power-cycle via
+# rfkill + bluesleep, load the Realtek vendor hci_uart, attach H5 on UART1.
+# rtk_hciattach downloads /lib/firmware/rtlbt/rtl8723d_fw + rtl8723d_config.
+
+start() {
+	rf=""
+	for t in /sys/class/rfkill/rfkill*/type; do
+		[ "$(cat "$t" 2>/dev/null)" = bluetooth ] && rf=${t%/type}
+	done
+	[ -n "$rf" ] || rf=/sys/class/rfkill/rfkill0
+	echo 0 > $rf/state
+	echo 0 > /proc/bluetooth/sleep/btwrite
+	sleep 1
+	echo 1 > $rf/state
+	echo 1 > /proc/bluetooth/sleep/btwrite
+	sleep 1
+	modprobe hci_uart
+	start-stop-daemon -S -q -b -m -p /run/rtk_hciattach.pid -x /usr/sbin/rtk_hciattach -- \
+		-n -s 115200 /dev/ttyS1 rtk_h5
+}
+
+case "$1" in
+	start) start ;;
+	stop) start-stop-daemon -K -q -p /run/rtk_hciattach.pid ;;
+	*) echo "Usage: $0 {start|stop}"; exit 1 ;;
+esac
+exit 0

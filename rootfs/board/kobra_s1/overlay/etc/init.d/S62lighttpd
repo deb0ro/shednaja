@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# lighttpd: Mainsail on port 80 + proxy to Moonraker (/etc/lighttpd/lighttpd.conf).
+
+start() {
+	mkdir -p /useremain/shednaja/printer_data/logs /useremain/shednaja/tmp
+	chown www-data:www-data /useremain/shednaja/tmp
+	start-stop-daemon -S -q -p /run/lighttpd.pid -x /usr/sbin/lighttpd -- -f /etc/lighttpd/lighttpd.conf
+}
+
+stop() {
+	start-stop-daemon -K -q -p /run/lighttpd.pid
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0

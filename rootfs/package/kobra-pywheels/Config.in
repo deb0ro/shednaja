@@ -1,0 +1,9 @@
+config BR2_PACKAGE_KOBRA_PYWHEELS
+	bool "kobra-pywheels"
+	depends on BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_LIBSODIUM # libnacl (ctypes)
+	help
+	  Pure-Python packages Moonraker needs that Buildroot 2023.02 does not
+	  have: inotify-simple, libnacl, importlib-metadata, zipp (pinned
+	  py3-none-any wheels) and dbus-fast (pure-Python fallback from the
+	  sdist, no Cython extensions).

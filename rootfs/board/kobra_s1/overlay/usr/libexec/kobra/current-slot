@@ -1,0 +1,10 @@
+#!/bin/sh
+# Prints the A/B slot this system runs from ("a" or "b"; empty if unknown). U-Boot puts
+# the root partition of the active slot on the kernel command line: system_a is
+# mmcblk0p8, system_b mmcblk0p9. Our system can sit in either slot; the other one holds
+# the stock firmware.
+case " $(cat /proc/cmdline) " in
+	*" root=/dev/mmcblk0p8 "*) echo a ;;
+	*" root=/dev/mmcblk0p9 "*) echo b ;;
+	*) echo "" ;;
+esac

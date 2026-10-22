@@ -1,0 +1,14 @@
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.cfg text eol=lf
+*.dts text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
+*.jpg binary
+*.webp binary
+*.patch text eol=lf
+*.config text eol=lf
+*.diff text eol=lf
+*.txt text eol=lf
+*.dtb binary

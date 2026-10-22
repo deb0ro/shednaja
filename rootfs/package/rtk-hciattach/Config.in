@@ -1,0 +1,7 @@
+config BR2_PACKAGE_RTK_HCIATTACH
+	bool "rtk-hciattach"
+	help
+	  Realtek rtk_hciattach (H5 attach + firmware download) for the
+	  RTL8723DS Bluetooth part, from radxa/rkwifibt (tools/rtk_hciattach).
+	  The source dir is passed in by tools/build_rootfs.sh
+	  (KOBRA_RKWIFIBT_DIR, pinned commit).

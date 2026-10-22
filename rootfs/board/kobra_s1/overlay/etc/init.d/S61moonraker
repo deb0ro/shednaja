@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# Moonraker from /usr/lib/moonraker, data path /useremain/shednaja/printer_data
+# (config/moonraker.conf, logs/moonraker.log, database/, gcodes/).
+
+PD=/useremain/shednaja/printer_data
+PIDFILE=/run/moonraker.pid
+
+start() {
+	/usr/libexec/kobra/printer-data-init || return 1
+	HOME=/root PYTHONPATH=/usr/lib/moonraker \
+	start-stop-daemon -S -q -b -m -p $PIDFILE -N 5 -x /usr/bin/python3 -- \
+		-m moonraker -d $PD
+}
+
+stop() {
+	start-stop-daemon -K -q -p $PIDFILE
+	rm -f $PIDFILE
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0

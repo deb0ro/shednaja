@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# Shutdown unmount (inittab ::shutdown:), instead of busybox "umount -a -r": unmounts
+# every filesystem except / and the kernel ones (/dev, /proc, /sys), remounting busy ones
+# read-only. "umount -a" also unmounts /dev when nothing holds it open (seen at boot),
+# and with it go /dev/console, which init needs to exec update-stage2 (inittab ::restart:),
+# and the /dev/.kobra-update-pending handover file: the USB update at boot then halted
+# the board instead of writing. /dev is devtmpfs, /proc and /sys are virtual, so keeping
+# them mounted costs nothing at power-off.
+
+awk '$2 != "/" && $2 !~ "^/(dev|proc|sys)(/|$)" {print $2}' /proc/mounts | sort -r |
+while read -r m; do
+	umount "$m" 2>/dev/null || mount -o remount,ro "$m" 2>/dev/null
+done
+exit 0

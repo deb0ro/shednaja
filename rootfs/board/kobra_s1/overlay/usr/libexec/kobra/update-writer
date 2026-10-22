@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# kobra-update stage 3: PID 1 inside the RAM chroot built by update-stage2 (/upd is
+# /useremain/shednaja/update). Writes the planned images into our slot ($SLOT), verifies each
+# one by reading it back, then reboots. Any failure switches the A/B metadata to the other
+# slot (stock).
+# Never exits: PID 1 exiting is a kernel panic, which does not reboot this board.
+
+export PATH=/bin
+# The pending file is data, not a script: only these keys, only plain characters.
+read_pending() {	# read_pending <file>
+	while IFS='=' read -r k v; do
+		case "$k" in PLAN|SLOT|UDEV|DEV_boot|DEV_oem|DEV_system) ;; *) continue ;; esac
+		case "$v" in *[!A-Za-z0-9:./\ _-]*) return 1 ;; esac
+		eval "$k=\$v"
+	done < "$1"
+	[ -n "$PLAN" ] && [ -n "$SLOT" ] && [ -n "$UDEV" ]
+}
+PLAN= SLOT= UDEV=
+# PLAN="part:file:size:sha256 ...", SLOT=a|b, DEV_<part>=/dev/mmcblk0pN; stage 2 checked it
+read_pending /pending || { echo "kobra-update: invalid pending file" > /dev/console; while true; do reboot -f; sleep 5; done; }
+LOG=/upd/last-update.log
+log() { echo "$(date '+%F %T') $*" >> $LOG; echo "kobra-update: $*" > /dev/kmsg; echo "kobra-update: $*" > /dev/console; }
+
+kill -9 -1 2>/dev/null	# nothing should be left, but nothing may read the squashfs any more
+echo "$(cut -d' ' -f1 /proc/uptime) writer: started in the RAM chroot" >> /upd/trace.log
+FAIL=0
+for item in $PLAN; do
+	set -- $(echo "$item" | tr : ' ')
+	part=$1 file=$2 size=$3 sum=$4
+	eval dev=\$DEV_$part
+	ok=0
+	echo "$(cut -d' ' -f1 /proc/uptime) writer: writing ${part}_$SLOT ($dev)" >> /upd/trace.log; sync
+	for try in 1 2; do
+		dd if=/upd/stage/$file of=$dev bs=64k conv=fsync 2>/dev/null
+		sync
+		echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
+		if [ "$(head -c "$size" $dev | sha256sum | cut -d' ' -f1)" = "$sum" ]; then ok=1; break; fi
+		log "  ${part}_$SLOT ($dev): readback mismatch (try $try)"
+	done
+	if [ $ok = 1 ]; then log "  ${part}_$SLOT written and verified"; else FAIL=1; log "  ${part}_$SLOT FAILED"; break; fi
+done
+if [ $FAIL = 1 ]; then
+	kobra-abctl other >> $LOG 2>&1
+	log "update FAILED - switched to the other slot (stock) for the next boot"
+	zcat /failed.fb.gz > /dev/fb0 2>/dev/null
+else
+	cp /upd/stage/manifest /upd/installed.manifest
+	log "update OK - rebooting into the new slot $SLOT"
+	zcat /done.fb.gz > /dev/fb0 2>/dev/null
+fi
+sleep 3	# leave the result on the display for a moment
+rm -rf /upd/stage
+sync
+umount /upd 2>/dev/null
+sync
+while true; do reboot -f; sleep 5; done

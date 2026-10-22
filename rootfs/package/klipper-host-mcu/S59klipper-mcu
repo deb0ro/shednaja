@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Klipper Linux MCU ([mcu host] in kobra_peripherals.cfg): the host board's chamber
+# light (gpiochip3/gpio21 = gpio117) and buzzer (pwmchip0/pwm0) for klippy (S60).
+# klipper_mcu opens the PWM through sysfs, so pwm0 has to be exported first. Its
+# polarity can come up "inverse" (output high at duty 0): set it to normal while it is
+# still disabled.
+
+PIDFILE=/run/klipper_mcu.pid
+SOCK=/tmp/klipper_host_mcu
+PWM=/sys/class/pwm/pwmchip0/pwm0
+
+start() {
+	[ -d $PWM ] || echo 0 > /sys/class/pwm/pwmchip0/export
+	echo 0 > $PWM/enable
+	echo normal > $PWM/polarity
+	start-stop-daemon -S -q -b -m -p $PIDFILE -x /usr/bin/klipper_mcu -- -r -I $SOCK
+	# klippy opens the pty right away: wait until it exists
+	for i in 1 2 3 4 5; do
+		[ -e $SOCK ] && return 0
+		sleep 1
+	done
+	echo "klipper-mcu: $SOCK did not appear" > /dev/kmsg
+}
+
+stop() {
+	start-stop-daemon -K -q -p $PIDFILE
+	rm -f $PIDFILE
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0

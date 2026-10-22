@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# HelixScreen touch UI from /opt/helixscreen on the built-in display (fb0 + fts_ts touch),
+# talking to the local Moonraker. helix-launcher.sh runs helix-watchdog, which shows the
+# splash and restarts helix-screen after a crash.
+# Settings (rotation, touch calibration, wizard state) in /useremain/shednaja/helixscreen,
+# log in /tmp/helixscreen.log (launcher output in /tmp/helixscreen-launcher.log).
+# The panel is mounted upside down relative to fb0, hence the fixed 180 degree rotation.
+
+DIR=/opt/helixscreen
+CFG=/useremain/shednaja/helixscreen
+PIDFILE=/run/helixscreen.pid
+
+start() {
+	[ -x $DIR/bin/helix-launcher.sh ] || return 0
+	mkdir -p $CFG/cache $CFG/backup || return 1
+	# Kobra S1 fan roles / known hardware, so "Hardware Health" does not nag on every boot
+	/usr/libexec/kobra/helix-defaults $CFG
+	# Moonraker (S61) needs a few seconds; the UI retries the connection itself.
+	# HELIX_DISABLE_AUTO_UPDATES: HelixScreen comes with the image (read-only /opt), so no
+	# update checks and no "Update Available" prompts; a new version comes with a ShedNaja update.
+	HOME=/root HELIX_DISABLE_AUTO_UPDATES=1 \
+	HELIX_DATA_DIR=$DIR HELIX_CONFIG_DIR=$CFG HELIX_CACHE_DIR=$CFG/cache HELIX_TMP_DIR=/tmp \
+	HELIX_DISPLAY_BACKEND=fbdev HELIX_FB_DEVICE=/dev/fb0 HELIX_TOUCH_DEVICE=/dev/input/event0 \
+	HELIX_BACKLIGHT_DEVICE=sysfs HELIX_DISPLAY_ROTATION=180 \
+	HELIX_LOG_DEST=file HELIX_LOG_FILE=/tmp/helixscreen.log \
+	MOONRAKER_HOST=127.0.0.1 MOONRAKER_PORT=7125 \
+	start-stop-daemon -S -q -b -m -p $PIDFILE -x /bin/sh -- \
+		-c "exec $DIR/bin/helix-launcher.sh >/tmp/helixscreen-launcher.log 2>&1"
+}
+
+stop() {
+	start-stop-daemon -K -q -p $PIDFILE
+	rm -f $PIDFILE
+	killall -q helix-watchdog helix-screen helix-splash
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0

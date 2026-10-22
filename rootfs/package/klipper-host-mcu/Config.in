@@ -1,0 +1,9 @@
+config BR2_PACKAGE_KLIPPER_HOST_MCU
+	bool "klipper-host-mcu"
+	depends on BR2_PACKAGE_KLIPPER
+	help
+	  Klipper "Linux MCU" (klipper_mcu) built from the same Klipper
+	  source as klippy. It gives Klipper the host board's own pins:
+	  the chamber light (GPIO3_C5 = gpio117) and the buzzer
+	  (pwmchip0/pwm0). S59klipper-mcu starts it before klippy on
+	  /tmp/klipper_host_mcu.

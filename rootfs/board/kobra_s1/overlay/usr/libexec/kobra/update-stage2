@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# kobra-update stage 2. Runs as PID 1: kobra-update wrote /dev/.kobra-update-pending and
+# sent SIGQUIT to init; busybox init ran the ::shutdown actions (rcK, umount-all),
+# killed every other process and exec'd this (inittab ::restart:). From here we build a
+# busybox chroot in RAM and exec into it, so PID 1 no longer runs from the squashfs root
+# that is about to be overwritten. PID 1 must never exit (that is a kernel panic, and a
+# panic does not reboot this board): every error path ends in reboot -f.
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+P=/dev/.kobra-update-pending
+R=/tmp/kobra-update-root
+
+TRACE=/useremain/shednaja/update/trace.log	# usable once /useremain is mounted rw
+EARLY=""
+msg() {
+	echo "kobra-update stage2: $*" > /dev/kmsg; echo "kobra-update stage2: $*" > /dev/console
+	if [ -w "$TRACE" ]; then echo "$(cut -d' ' -f1 /proc/uptime) stage2: $*" >> $TRACE
+	else EARLY="$EARLY$(cut -d' ' -f1 /proc/uptime) stage2: $*
+"; fi
+}
+# The pending file is data, not a script: only these keys, only plain characters.
+read_pending() {	# read_pending <file>
+	while IFS='=' read -r k v; do
+		case "$k" in PLAN|SLOT|UDEV|DEV_boot|DEV_oem|DEV_system) ;; *) continue ;; esac
+		case "$v" in *[!A-Za-z0-9:./\ _-]*) return 1 ;; esac
+		eval "$k=\$v"
+	done < "$1"
+	[ -n "$PLAN" ] && [ -n "$SLOT" ] && [ -n "$UDEV" ]
+}
+give_up() {
+	msg "$* - rebooting without writing"
+	# keep the early messages: get /useremain writable if that has not happened yet
+	if [ ! -w "$TRACE" ]; then
+		mount -o remount,rw /useremain 2>/dev/null ||
+			mount -t ext4 /dev/block/by-name/useremain /useremain 2>/dev/null
+		printf '%s' "$EARLY" >> $TRACE 2>/dev/null
+	fi
+	sync; while true; do reboot -f; sleep 5; done
+}
+
+mountpoint -q /proc || mount -t proc proc /proc
+mountpoint -q /sys || mount -t sysfs sysfs /sys
+# kept mounted by umount-all; devtmpfs is one instance, so a new mount still has the
+# device nodes and the pending file
+mountpoint -q /dev || mount -t devtmpfs devtmpfs /dev
+mount -o remount,rw /dev 2>/dev/null
+# "Updating firmware" on the display (HelixScreen has been stopped by rcK)
+SPLASH=/usr/share/shednaja/splash
+echo 0 > /sys/class/backlight/backlight/bl_power 2>/dev/null
+# At boot (USB update) HelixScreen may be stopped before it took over the display, which
+# then still scans out the U-Boot logo: unblank and pan like HelixScreen's fbdev backend
+# does, so the panel shows fb0.
+echo 0 > /sys/class/graphics/fb0/blank 2>/dev/null
+echo 0,0 > /sys/class/graphics/fb0/pan 2>/dev/null
+zcat $SPLASH/updating.fb.gz > /dev/fb0 2>/dev/null
+msg "started (splash shown)"
+[ -f $P ] || give_up "no pending update"
+PLAN= SLOT= UDEV=
+read_pending $P || give_up "invalid pending file"
+if mountpoint -q /useremain; then
+	mount -o remount,rw /useremain || give_up "cannot remount /useremain rw"
+else
+	mount -t ext4 -o noatime "$UDEV" /useremain || give_up "cannot mount $UDEV"
+fi
+touch $TRACE 2>/dev/null && printf '%s' "$EARLY" >> $TRACE
+msg "useremain rw; mounts: $(awk '{printf "%s ", $2}' /proc/mounts)"
+dmesg > /useremain/shednaja/update/stage2-dmesg.log 2>/dev/null
+[ -d /useremain/shednaja/update/stage ] || give_up "staged images missing"
+
+mountpoint -q /tmp || mount -t tmpfs -o size=16m tmpfs /tmp || give_up "no tmpfs"
+rm -rf $R
+mkdir -p $R/bin $R/lib $R/dev $R/proc $R/sys $R/upd
+cp /bin/busybox /usr/sbin/kobra-abctl $R/bin/ || give_up "cannot copy busybox"
+for a in $(busybox --list); do [ -e $R/bin/$a ] || ln -s busybox $R/bin/$a; done
+for l in /lib/ld-uClibc.so.0 /lib/ld-uClibc.so.1 /lib/libc.so.0; do cp -L $l $R/lib/ || give_up "cannot copy $l"; done
+cp /usr/libexec/kobra/update-writer $R/writer.sh && cp $P $R/pending || give_up "cannot copy writer"
+cp $SPLASH/done.fb.gz $SPLASH/failed.fb.gz $R/ 2>/dev/null
+for d in dev proc sys; do mount --bind /$d $R/$d; done
+mount --bind /useremain/shednaja/update $R/upd || give_up "cannot bind the update dir"
+msg "entering RAM chroot"
+exec chroot $R /bin/sh /writer.sh
+give_up "exec chroot failed"

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MAINSAIL_CONFIG
+	bool "mainsail-config"
+	help
+	  mainsail.cfg client macros (mainsail-crew/mainsail-config), shipped
+	  with the printer_data defaults.

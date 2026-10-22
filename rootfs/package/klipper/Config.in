@@ -1,0 +1,13 @@
+config BR2_PACKAGE_KLIPPER
+	bool "klipper"
+	depends on BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_PYTHON_GREENLET
+	select BR2_PACKAGE_PYTHON_CFFI
+	select BR2_PACKAGE_PYTHON_SERIAL
+	select BR2_PACKAGE_PYTHON_JINJA2
+	select BR2_PACKAGE_PYTHON_MARKUPSAFE
+	select BR2_PACKAGE_PYTHON3_ZLIB
+	help
+	  Klipper host (klippy) from the Kobra-S1 fork (cs1237, probe_ks1,
+	  lis2dw12), installed read-only in /usr/lib/klipper with a
+	  cross-built klippy/chelper/c_helper.so.

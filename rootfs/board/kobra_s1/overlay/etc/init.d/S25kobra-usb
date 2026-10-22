@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# USB: GPIO1_B1 (gpio41) high connects the SoC's USB host to the on-board GL850G hub
+# (05e3:0610) with the camera (13d3:784b on port 3) and the ACE Pro / USB ports.
+# Without it nothing ever enumerates. Stock sets the same in /userdata/app/kenv/run.sh
+# ("usb sel") before GoKlipper starts.
+
+GPIO=41
+
+case "$1" in
+	start)
+		[ -d /sys/class/gpio/gpio$GPIO ] || echo $GPIO > /sys/class/gpio/export
+		echo out > /sys/class/gpio/gpio$GPIO/direction
+		echo 1 > /sys/class/gpio/gpio$GPIO/value
+		;;
+	stop)
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"; exit 1 ;;
+esac
+exit 0

@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Wi-Fi client with the stock config: /userdata/wifi_cfg/wpa_supplicant.conf
+# (written by the Anycubic UI; ctrl_interface=/var/run/wpa_supplicant,
+# update_config=1). DHCP with busybox udhcpc. eth0 also gets DHCP if a cable is in.
+
+CONF=/userdata/wifi_cfg/wpa_supplicant.conf
+IFACE=wlan0
+
+start() {
+	i=0
+	while [ ! -d /sys/class/net/$IFACE ] && [ $i -lt 20 ]; do sleep 0.5; i=$((i + 1)); done
+	if [ ! -d /sys/class/net/$IFACE ]; then
+		echo "wifi: no $IFACE" > /dev/kmsg
+	elif [ ! -f $CONF ]; then
+		echo "wifi: $CONF missing, not starting wpa_supplicant" > /dev/kmsg
+	else
+		ip link set $IFACE up
+		start-stop-daemon -S -q -p /run/wpa_supplicant.pid -x /usr/sbin/wpa_supplicant -- \
+			-B -D nl80211 -i $IFACE -c $CONF -P /run/wpa_supplicant.pid
+		start-stop-daemon -S -q -b -m -p /run/udhcpc.$IFACE.pid -x /sbin/udhcpc -- \
+			-f -i $IFACE -x hostname:$(hostname)
+	fi
+	if [ -d /sys/class/net/eth0 ]; then
+		ip link set eth0 up
+		start-stop-daemon -S -q -b -m -p /run/udhcpc.eth0.pid -x /sbin/udhcpc -- \
+			-f -i eth0 -x hostname:$(hostname)
+	fi
+}
+
+stop() {
+	for p in /run/udhcpc.$IFACE.pid /run/udhcpc.eth0.pid /run/wpa_supplicant.pid; do
+		[ -f $p ] && start-stop-daemon -K -q -p $p
+	done
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0

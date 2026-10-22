@@ -1,0 +1,52 @@
+#!/usr/bin/python3
+# Kobra S1 defaults for HelixScreen's settings.json, run by S70helixscreen before the UI
+# starts. Without them "Hardware Health" lists the Kobra fans and the ACE return sensor as
+# "newly discovered" on every boot. Only empty fan roles and unknown hardware entries are
+# filled in, so choices made in the UI are kept. Does nothing before the first-run wizard
+# has written settings.json.
+import json
+import os
+import sys
+
+path = os.path.join(sys.argv[1] if len(sys.argv) > 1 else "/useremain/shednaja/helixscreen",
+                    "settings.json")
+FAN_ROLES = {
+    "aux": "fan_generic box_fan",              # side part-cooling fan (M106 P2)
+    "exhaust": "fan_generic air_filter_fan",   # air filter / exhaust (M106 P3)
+}
+# HelixScreen reports an item as "newly discovered" unless it has a fan role or is in
+# hardware.expected; hardware.optional keeps a missing one (ACE Pro unplugged) quiet.
+# The Kobra extras go into both lists.
+EXTRAS = ["fan_generic box_fan", "fan_generic air_filter_fan",
+            "controller_fan controller_fan",              # electronics fan, Klipper-driven
+            "filament_switch_sensor filament_runout_rdm"]  # ACE Pro return module
+
+try:
+    with open(path) as f:
+        settings = json.load(f)
+except (OSError, ValueError):
+    sys.exit(0)
+printer = settings.get("printers", {}).get("default")
+if not isinstance(printer, dict):
+    sys.exit(0)
+
+changed = False
+fans = printer.setdefault("fans", {})
+for role, name in FAN_ROLES.items():
+    if not fans.get(role):
+        fans[role] = name
+        changed = True
+hw = printer.setdefault("hardware", {})
+expected = hw.setdefault("expected", [])
+optional = hw.setdefault("optional", [])
+for name in EXTRAS:
+    for lst in (expected, optional):
+        if name not in lst:
+            lst.append(name)
+            changed = True
+
+if changed:
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(settings, f, indent=4)
+    os.replace(tmp, path)

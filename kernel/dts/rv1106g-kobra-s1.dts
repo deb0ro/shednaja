@@ -1,0 +1,486 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Anycubic Kobra S1 host board (Rockchip RV1106G3, 256 MB DDR3, 8 GB eMMC).
+ *
+ * Rebuilt at source level from the stock DTB (analysis/kobra_s1.dts, FW 2.7.2.7).
+ * Anycubic started from the Rockchip "IPC38 V10 SPI NAND" EVB, so this file includes
+ * the same dtsi set and only carries the Kobra-specific overrides. Differences to the
+ * stock DTB are listed in docs/kernel-build.md and checked with tools/dtb_normalize.py.
+ *
+ * Console: FIQ debugger on UART2 (pad J1, 115200), console=ttyFIQ0. The 8250
+ * earlycon on the same UART prints the log before the FIQ debugger is registered.
+ */
+
+/dts-v1/;
+
+#include "rv1106.dtsi"
+#include "rv1106-evb.dtsi"
+#include "rv1106-ipc.dtsi"
+
+/ {
+	model = "Anycubic Kobra S1 (RV1106G3)";
+	compatible = "anycubic,kobra-s1", "rockchip,rv1106";
+
+	chosen {
+		/* U-Boot replaces root= with the partition of the active A/B slot. */
+		bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=ttyFIQ0 panic=5 oops=panic rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0 root=/dev/mmcblk0p8 rootfstype=squashfs rk_dma_heap_cma=18M";
+	};
+
+	/* EVB/IPC parts that are not on this board */
+	/delete-node/ acodec-sound;
+	/delete-node/ adc-keys;
+	/delete-node/ restart-poweroff;
+	/*
+	 * Not in the stock DT (older SDK dtsi) and unused here (CONFIG_ARM_PSCI is off;
+	 * reboot goes through the CRU restart notifier like stock). Removed so a later
+	 * PSCI-enabled config does not silently depend on the stock OP-TEE.
+	 */
+	/delete-node/ psci;
+
+	vcc3v3_wifi: vcc3v3-wifi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_wifi";
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_pwren>;
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 0 25000 0>;
+		brightness-levels = <
+			  0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
+			 16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
+			 32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47
+			 48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63
+			 64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79
+			 80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95
+			 96  97  98  99 100 101 102 103 104 105 106 107 108 109 110 111
+			112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127
+			128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143
+			144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159
+			160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175
+			176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191
+			192 193 194 195 196 197 198 199 200 201 202 203 204 205 206 207
+			208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223
+			224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239
+			240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255>;
+		default-brightness-level = <200>;
+		enable-gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	/* 800x480 18-bit (RGB666) parallel panel, 31.25 MHz */
+	panel {
+		compatible = "simple-panel";
+		bus-format = <0x1009>;	/* MEDIA_BUS_FMT_RGB666_1X18 */
+		backlight = <&backlight>;
+		/* empty gpio properties as in stock (no panel enable/reset line) */
+		enable-gpios;
+		enable-delay-ms = <20>;
+		reset-gpios;
+		reset-value = <0>;
+		reset-delay-ms = <10>;
+		status = "okay";
+
+		display-timings {
+			native-mode = <&timing0>;
+
+			timing0: timing0 {
+				clock-frequency = <31250000>;
+				hactive = <800>;
+				hback-porch = <8>;
+				hfront-porch = <8>;
+				hsync-len = <4>;
+				vactive = <480>;
+				vback-porch = <8>;
+				vfront-porch = <8>;
+				vsync-len = <4>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};
+		};
+
+		port {
+			panel_in_rgb: endpoint {
+				remote-endpoint = <&rgb_out_panel>;
+			};
+		};
+	};
+
+	/* RTL8723DS: Wi-Fi on SDIO (sdmmc controller), Bluetooth on UART1 */
+	wireless-wlan {
+		compatible = "wlan-platdata";
+		wifi_chip_type = "rtl8723ds";
+		pinctrl-names = "default";
+		status = "okay";
+	};
+
+	wireless_bluetooth {
+		compatible = "bluetooth-platdata";
+		uart_rts_gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default", "rts_gpio";
+		pinctrl-0 = <&uart1m0_rtsn>;
+		pinctrl-1 = <&uart1_rts_gpio>;
+		BT,reset_gpio = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		linux,cma {
+			compatible = "shared-dma-pool";
+			inactive;
+			reusable;
+			size = <0x1000000>;
+			linux,cma-default;
+		};
+
+		/* filled in by U-Boot with the boot logo framebuffer */
+		drm_logo: drm-logo@00000000 {
+			compatible = "rockchip,drm-logo";
+			reg = <0x0 0x0>;
+		};
+	};
+};
+
+/*
+ * FIQ debugger console on UART2 m1 (GPIO1_B2/B3 = pad J1), 115200. Same node as the
+ * tested build/boot_fiq_test.img (tools/fit_patch_console.py --mode fiq); UART2 itself
+ * stays disabled so the 8250 driver does not take the port after earlycon.
+ */
+&fiq_debugger {
+	rockchip,serial-id = <2>;
+	rockchip,irq-mode-enable = <1>;
+	rockchip,baudrate = <115200>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2m1_xfer>;
+	status = "okay";
+};
+
+/* Stock runs the CPU at a fixed 1416 MHz (only this OPP, max 1.05 V). */
+&cpu0_opp_table {
+	/delete-property/ nvmem-cells;
+	/delete-property/ nvmem-cell-names;
+	/delete-property/ rockchip,temp-hysteresis;
+	/delete-property/ rockchip,low-temp;
+	/delete-property/ rockchip,low-temp-min-volt;
+	/delete-node/ opp-408000000;
+	/delete-node/ opp-600000000;
+	/delete-node/ opp-816000000;
+	/delete-node/ opp-1104000000;
+	/delete-node/ opp-1200000000;
+	/delete-node/ opp-1296000000;
+	/delete-node/ opp-1512000000;
+	/delete-node/ opp-1608000000;
+
+	opp-1416000000 {
+		opp-microvolt = <925000 850000 1050000>;
+	};
+};
+
+/*
+ * vdd_arm points at PWM7 (pwm7m2, GPIO3_C6) instead of the EVB's PWM0, but stock keeps
+ * PWM7 disabled: the pwm-regulator never probes and the CPU stays at the voltage the
+ * bootloader set (fixed 1416 MHz). Kept like that until the regulator is verified.
+ */
+&vdd_arm {
+	pwms = <&pwm7 0 5000 1>;
+};
+
+&pwm0 {
+	status = "okay";
+};
+
+&pwm1 {
+	pinctrl-0 = <&pwm1m2_pins>;
+	status = "okay";
+};
+
+&pwm7 {
+	pinctrl-0 = <&pwm7m2_pins>;
+	status = "disabled";
+};
+
+/* ---- display: VOP -> RGB -> panel ---- */
+&display_subsystem {
+	memory-region = <&drm_logo>;
+	memory-region-names = "drm-logo";
+	status = "okay";
+};
+
+&route_rgb {
+	logo,uboot = "logo.bmp";
+	logo,kernel = "logo_kernel.bmp";
+	logo,mode = "center";
+	charge_logo,mode = "center";
+	status = "okay";
+};
+
+&vop {
+	status = "okay";
+};
+
+&rgb {
+	pinctrl-names = "default";
+	pinctrl-0 = <&lcd_pins>;
+	status = "okay";
+
+	ports {
+		port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			rgb_out_panel: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&panel_in_rgb>;
+			};
+		};
+	};
+};
+
+&rgb_in_vop {
+	status = "okay";
+};
+
+/* ---- touch: FocalTech FT (or Hynitron CST836U on some batches) on I2C3 m2 ---- */
+&i2c3 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3m2_xfer>;
+	status = "okay";
+
+	focaltech@38 {
+		compatible = "focaltech,fts";
+		reg = <0x38>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PA1 IRQ_TYPE_EDGE_FALLING>;
+		focaltech,reset-gpio = <&gpio1 RK_PB0 GPIO_ACTIVE_LOW>;
+		focaltech,irq-gpio = <&gpio0 RK_PA1 IRQ_TYPE_LEVEL_LOW>;
+		focaltech,max-touch-number = <5>;
+		focaltech,display-coords = <0 0 799 479>;
+		status = "okay";
+	};
+
+	hynitron_cst836u@15 {
+		compatible = "hyn,7xx";
+		reg = <0x15>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PA1 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpio = <&gpio1 RK_PB0 GPIO_ACTIVE_LOW>;
+		irq-gpio = <&gpio0 RK_PA1 IRQ_TYPE_LEVEL_LOW>;
+		max-touch-number = <1>;
+		display-coords = <0 0 800 480>;
+		pos-swap = <0>;
+		posx-reverse = <0>;
+		posy-reverse = <0>;
+		status = "okay";
+	};
+};
+
+/* I2C4: EVB camera sensors removed; stock keeps an (unused) xpt7603 node, bus disabled */
+&i2c4 {
+	clock-frequency = <400000>;
+	pinctrl-0 = <&i2c4m0_xfer>;
+	status = "disabled";
+
+	/delete-node/ sc3336@30;
+	/delete-node/ sc4336@30;
+	/delete-node/ sc530ai@30;
+
+	xpt7603@48 {
+		compatible = "xpt7603";
+		reg = <0x48>;
+		gpio_irq = <&gpio0 RK_PA1 IRQ_TYPE_LEVEL_LOW>;
+		max-x = <480>;
+		max-y = <272>;
+		status = "okay";
+	};
+};
+
+/* ---- camera pipeline: the printer camera is UVC on USB, the CSI path is unused ---- */
+&csi2_dphy0 {
+	status = "disabled";
+	/delete-node/ ports;
+};
+
+&mipi0_csi2 {
+	status = "disabled";
+	/delete-node/ ports;
+};
+
+&mipi0_csi2_hw {
+	status = "disabled";
+};
+
+&mipi1_csi2_hw {
+	status = "disabled";
+};
+
+&rkcif_mipi_lvds {
+	status = "disabled";
+	/delete-node/ port;
+};
+
+/* ---- audio: none on this board ---- */
+&acodec {
+	status = "disabled";
+};
+
+&i2s0_8ch {
+	status = "disabled";
+};
+
+/* ---- storage ---- */
+&emmc {
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	non-removable;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	rockchip,default-sample-phase = <90>;
+	/delete-property/ rockchip,use-v2-tuning;
+	no-sdio;
+	no-sd;
+	status = "okay";
+};
+
+/* no SPI flash on the board (the EVB's SPI NAND) */
+&sfc {
+	status = "disabled";
+};
+
+/* RTL8723DS SDIO Wi-Fi on the "sdmmc" controller (SDMMC0 pins) */
+&sdmmc {
+	/delete-property/ cap-mmc-highspeed;
+	/delete-property/ disable-wp;
+	/delete-property/ no-sdio;
+	/delete-property/ vmmc-supply;
+	/delete-property/ pinctrl-1;
+	max-frequency = <50000000>;
+	clock-frequency = <20000000>;
+	clock-freq-min-max = <200000 50000000>;
+	bus-width = <4>;
+	no-sd;
+	no-mmc;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	keep-power-in-suspend;
+	non-removable;
+	supports-sdio;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc0_cmd &sdmmc0_clk &sdmmc0_bus4>;
+	num-slots = <1>;
+	status = "okay";
+};
+
+/* ---- UARTs ---- */
+/* UART1 = Bluetooth (RTS handled by bluetooth-platdata) */
+&uart1 {
+	pinctrl-0 = <&uart1m0_xfer &uart1m0_ctsn>;
+	status = "okay";
+};
+
+/* UART3 / UART5 = the two Klipper MCUs (576000 baud) */
+&uart3 {
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-0 = <&uart5m2_xfer>;
+	status = "okay";
+};
+
+&uart0 {
+	pinctrl-0 = <&uart0m1_xfer>;
+};
+
+/* ---- SPI1: two custom "charlie,spidev" devices (Anycubic), bus left disabled as in stock ---- */
+&spi1 {
+	max-freq = <5000000>;
+	num-cs = <2>;
+	/delete-property/ assigned-clocks;
+	/delete-property/ assigned-clock-rates;
+	status = "disabled";
+
+	spi_test1@0 {
+		compatible = "charlie,spidev";
+		reg = <0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-cpha = <1>;
+		spi-cpol = <1>;
+		spi-max-frequency = <5000000>;
+		status = "okay";
+	};
+
+	spi_test2@1 {
+		compatible = "charlie,spidev";
+		reg = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-cpha = <1>;
+		spi-cpol = <1>;
+		spi-max-frequency = <5000000>;
+		status = "okay";
+	};
+};
+
+/* ---- USB: DWC3 host only (GL850G hub -> UVC camera, USB stick) ---- */
+&u2phy {
+	status = "okay";
+};
+
+&u2phy_otg {
+	status = "okay";
+};
+
+&usbdrd {
+	status = "okay";
+};
+
+&usbdrd_dwc3 {
+	dr_mode = "host";
+	extcon = <&u2phy>;
+	status = "okay";
+};
+
+/* stock has the thermal sensor disabled */
+&tsadc {
+	status = "disabled";
+};
+
+/*
+ * With tsadc disabled, soc-thermal cannot be read (-EINVAL) and the RK630 PHY service
+ * task logged "failed to read out thermal zone (-22)" every second. The PHY only uses
+ * the temperature to pick its RX signal-detect config, which never happened anyway;
+ * without the property it skips the read.
+ */
+&rmii_phy {
+	/delete-property/ rockchip,thermal-zone;
+};
+
+&pinctrl {
+	wcc3v3_wifi {
+		wifi_pwren: wifi-pwren {
+			rockchip,pins = <0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	wireless_bluetooth {
+		uart1_rts_gpio: uart1-rts-gpio {
+			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};

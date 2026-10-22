@@ -1,0 +1,21 @@
+{
+  "_comment": "ShedNaja: printer-profile keys that differ from an Anycubic-firmware Kobra S1 profile. Applied by tools/make_orca_bundle.py on top of the user's exported .orca_printer bundle; everything else (machine limits, retraction, filament and process presets) is kept. printer_name replaces the exported printer preset name; 'rename' is applied to the names (and file names, references) of all presets in the bundle.",
+  "printer_name": "Kobra S1 ShedNaja 0.4 nozzle",
+  "rename": {
+    " - MPC561": " - ShedNaja"
+  },
+  "keys": {
+    "gcode_flavor": "klipper",
+    "host_type": "octoprint",
+    "machine_start_gcode": "; ShedNaja (native Klipper): heating, homing, nozzle cleaning, adaptive bed mesh\n; and purge line are done by PRINT_START (kobra_macros.cfg).\nSET_PRINT_STATS_INFO TOTAL_LAYER=[total_layer_count]\nPRINT_START BED=[first_layer_bed_temperature] EXTRUDER=[first_layer_temperature[initial_tool]]\n",
+    "machine_end_gcode": "PRINT_END\n",
+    "machine_pause_gcode": "PAUSE\n",
+    "change_filament_gcode": "T[next_extruder]\n",
+    "before_layer_change_gcode": "; BEFORE_LAYER_CHANGE [layer_num] @ [layer_z]mm\n",
+    "layer_change_gcode": "; AFTER_LAYER_CHANGE [layer_num] @ [layer_z]mm\nSET_PRINT_STATS_INFO CURRENT_LAYER={layer_num + 1}\n",
+    "time_lapse_gcode": "",
+    "printing_by_object_gcode": "",
+    "template_custom_gcode": "",
+    "file_start_gcode": ""
+  }
+}

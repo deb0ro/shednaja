@@ -1,0 +1,615 @@
+6,34d5
+< /acodec-sound/simple-audio-card,codec: sound-dai = <&/acodec@ff480000>
+< /acodec-sound/simple-audio-card,cpu: sound-dai = <&/i2s@ffae0000>
+< /acodec-sound: compatible = "simple-audio-card"
+< /acodec-sound: simple-audio-card,format = "i2s"
+< /acodec-sound: simple-audio-card,mclk-fs = <0x100>
+< /acodec-sound: simple-audio-card,name = "rv-acodec"
+< /acodec@ff480000: #sound-dai-cells = <0x0>
+< /acodec@ff480000: acodec,micbias = []
+< /acodec@ff480000: clock-names = "pclk_acodec", "mclk_acodec", "mclk_cpu"
+< /acodec@ff480000: clocks = <&/clock-controller@ff3a0000 0x18, &/clock-controller@ff3a0000 0x19, &/clock-controller@ff3a0000 0x9f>
+< /acodec@ff480000: compatible = "rockchip,rv1106-codec"
+< /acodec@ff480000: init-mic-gain = <0x22>
+< /acodec@ff480000: pa-ctl-gpios = <&/pinctrl/gpio@ff530000 0x1 0x0>
+< /acodec@ff480000: reg = <0xff480000 0x1000>
+< /acodec@ff480000: reset-names = "acodec-reset"
+< /acodec@ff480000: resets = <&/clock-controller@ff3a0000 0x48063>
+< /acodec@ff480000: rockchip,grf = <&/syscon@ff000000>
+< /acodec@ff480000: status = "okay"
+< /adc-keys/key_volumedown-key: label = "key_volumedown"
+< /adc-keys/key_volumedown-key: linux,code = <0x72>
+< /adc-keys/key_volumedown-key: press-threshold-microvolt = <0x61d8d>
+< /adc-keys/key_volumeup-key: label = "key_volumeup"
+< /adc-keys/key_volumeup-key: linux,code = <0x73>
+< /adc-keys/key_volumeup-key: press-threshold-microvolt = <0x0>
+< /adc-keys: compatible = "adc-keys"
+< /adc-keys: io-channel-names = "buttons"
+< /adc-keys: io-channels = <&/saradc@ff3c0000 0x0>
+< /adc-keys: keyup-threshold-microvolt = <0x1b7740>
+< /adc-keys: poll-interval = <0x64>
+78c49
+< /arm-pmu: interrupt-affinity = <0x7>
+---
+> /arm-pmu: interrupt-affinity = <0x6>
+80c51,57
+< /chosen: bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=ttyFIQ0 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0"
+---
+> /backlight: brightness-levels = <0x0 0x1 0x2 0x3 0x4 0x5 0x6 0x7 0x8 0x9 0xa 0xb 0xc 0xd 0xe 0xf 0x10 0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a 0x1b 0x1c 0x1d 0x1e 0x1f 0x20 0x21 0x22 0x23 0x24 0x25 0x26 0x27 0x28 0x29 0x2a 0x2b 0x2c 0x2d 0x2e 0x2f 0x30 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x3a 0x3b 0x3c 0x3d 0x3e 0x3f 0x40 0x41 0x42 0x43 0x44 0x45 0x46 0x47 0x48 0x49 0x4a 0x4b 0x4c 0x4d 0x4e 0x4f 0x50 0x51 0x52 0x53 0x54 0x55 0x56 0x57 0x58 0x59 0x5a 0x5b 0x5c 0x5d 0x5e 0x5f 0x60 0x61 0x62 0x63 0x64 0x65 0x66 0x67 0x68 0x69 0x6a 0x6b 0x6c 0x6d 0x6e 0x6f 0x70 0x71 0x72 0x73 0x74 0x75 0x76 0x77 0x78 0x79 0x7a 0x7b 0x7c 0x7d 0x7e 0x7f 0x80 0x81 0x82 0x83 0x84 0x85 0x86 0x87 0x88 0x89 0x8a 0x8b 0x8c 0x8d 0x8e 0x8f 0x90 0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0 0xa1 0xa2 0xa3 0xa4 0xa5 0xa6 0xa7 0xa8 0xa9 0xaa 0xab 0xac 0xad 0xae 0xaf 0xb0 0xb1 0xb2 0xb3 0xb4 0xb5 0xb6 0xb7 0xb8 0xb9 0xba 0xbb 0xbc 0xbd 0xbe 0xbf 0xc0 0xc1 0xc2 0xc3 0xc4 0xc5 0xc6 0xc7 0xc8 0xc9 0xca 0xcb 0xcc 0xcd 0xce 0xcf 0xd0 0xd1 0xd2 0xd3 0xd4 0xd5 0xd6 0xd7 0xd8 0xd9 0xda 0xdb 0xdc 0xdd 0xde 0xdf 0xe0 0xe1 0xe2 0xe3 0xe4 0xe5 0xe6 0xe7 0xe8 0xe9 0xea 0xeb 0xec 0xed 0xee 0xef 0xf0 0xf1 0xf2 0xf3 0xf4 0xf5 0xf6 0xf7 0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff>
+> /backlight: compatible = "pwm-backlight"
+> /backlight: default-brightness-level = <0xc8>
+> /backlight: enable-gpios = <&/pinctrl/gpio@ff380000 0x0 0x0>
+> /backlight: pwms = <&/pwm@ff350010 0x0 0x61a8 0x0>
+> /backlight: status = "okay"
+> /chosen: bootargs = "earlycon=,mmio32,0xff4c0000 console= rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0 root=/dev/mmcblk0p8 rootfstype=squashfs rk_dma_heap_cma=18M"
+101,109d77
+< /cpu0-opp-table/opp-1104000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-1104000000: opp-hz = <0x0 0x41cdb400>
+< /cpu0-opp-table/opp-1104000000: opp-microvolt = <0xcf850 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-1200000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-1200000000: opp-hz = <0x0 0x47868c00>
+< /cpu0-opp-table/opp-1200000000: opp-microvolt = <0xcf850 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-1296000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-1296000000: opp-hz = <0x0 0x4d3f6400>
+< /cpu0-opp-table/opp-1296000000: opp-microvolt = <0xd59f8 0xcf850 0xf4240>
+112,128c80
+< /cpu0-opp-table/opp-1416000000: opp-microvolt = <0xe1d48 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-1512000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-1512000000: opp-hz = <0x0 0x5a1f4a00>
+< /cpu0-opp-table/opp-1512000000: opp-microvolt = <0xee098 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-1608000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-1608000000: opp-hz = <0x0 0x5fd82200>
+< /cpu0-opp-table/opp-1608000000: opp-microvolt = <0xf4240 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-408000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-408000000: opp-hz = <0x0 0x18519600>
+< /cpu0-opp-table/opp-408000000: opp-microvolt = <0xcf850 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-600000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-600000000: opp-hz = <0x0 0x23c34600>
+< /cpu0-opp-table/opp-600000000: opp-microvolt = <0xcf850 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-816000000: clock-latency-ns = <0x9c40>
+< /cpu0-opp-table/opp-816000000: opp-hz = <0x0 0x30a32c00>
+< /cpu0-opp-table/opp-816000000: opp-microvolt = <0xcf850 0xcf850 0xf4240>
+< /cpu0-opp-table/opp-816000000: opp-suspend = []
+---
+> /cpu0-opp-table/opp-1416000000: opp-microvolt = <0xe1d48 0xcf850 0x100590>
+130,131d81
+< /cpu0-opp-table: nvmem-cell-names = "leakage"
+< /cpu0-opp-table: nvmem-cells = <&/otp@ff3d0000/cpu-leakage@1a>
+134,135d83
+< /cpu0-opp-table: rockchip,low-temp = <0x2710>
+< /cpu0-opp-table: rockchip,low-temp-min-volt = <0xdbba0>
+139d86
+< /cpu0-opp-table: rockchip,temp-hysteresis = <0x1388>
+161c108
+< /csi2-dphy0/ports/port@0/endpoint@0: remote-endpoint = <&/i2c@ff470000/sc3336@30/port/endpoint>
+---
+> /csi2-dphy0/ports/port@0/endpoint@0: remote-endpoint = <0xb>
+164c111
+< /csi2-dphy0/ports/port@0/endpoint@1: remote-endpoint = <&/i2c@ff470000/sc4336@30/port/endpoint>
+---
+> /csi2-dphy0/ports/port@0/endpoint@1: remote-endpoint = <0xc>
+167c114,117
+< /csi2-dphy0/ports/port@0/endpoint@2: remote-endpoint = <&/i2c@ff470000/sc530ai@30/port/endpoint>
+---
+> /csi2-dphy0/ports/port@0/endpoint@2: remote-endpoint = <0xd>
+> /csi2-dphy0/ports/port@0/endpoint@3: data-lanes = <0x1 0x2>
+> /csi2-dphy0/ports/port@0/endpoint@3: reg = <0x3>
+> /csi2-dphy0/ports/port@0/endpoint@3: remote-endpoint = <0xe>
+172c122
+< /csi2-dphy0/ports/port@1/endpoint@0: remote-endpoint = <&/mipi0-csi2/ports/port@0/endpoint@1>
+---
+> /csi2-dphy0/ports/port@1/endpoint@0: remote-endpoint = <0xf>
+186a137,147
+> /display-subsystem/route/route-rgb: charge_logo,mode = "center"
+> /display-subsystem/route/route-rgb: connect = <0x12>
+> /display-subsystem/route/route-rgb: logo,kernel = "logo_kernel.bmp"
+> /display-subsystem/route/route-rgb: logo,mode = "center"
+> /display-subsystem/route/route-rgb: logo,uboot = "logo.bmp"
+> /display-subsystem/route/route-rgb: status = "okay"
+> /display-subsystem: compatible = "rockchip,display-subsystem"
+> /display-subsystem: memory-region = <&/reserved-memory/drm-logo@00000000>
+> /display-subsystem: memory-region-names = "drm-logo"
+> /display-subsystem: ports = <&/vop@ff990000/port>
+> /display-subsystem: status = "okay"
+194d154
+< /ethernet@ffa80000/mdio/ethernet-phy@2: bgs,increment = <0x0>
+202d161
+< /ethernet@ffa80000/mdio/ethernet-phy@2: rockchip,thermal-zone = "soc-thermal"
+227,229c186,187
+< /ethernet@ffa80000: rx-dma-size = <0x80>
+< /ethernet@ffa80000: snps,axi-config = <0x4f>
+< /ethernet@ffa80000: snps,flow-ctrl = <0x0>
+---
+> /ethernet@ffa80000: rx-dma-size = <0x10>
+> /ethernet@ffa80000: snps,axi-config = <0x52>
+231,232c189,190
+< /ethernet@ffa80000: snps,mtl-rx-config = <0x50>
+< /ethernet@ffa80000: snps,mtl-tx-config = <0x51>
+---
+> /ethernet@ffa80000: snps,mtl-rx-config = <0x53>
+> /ethernet@ffa80000: snps,mtl-tx-config = <0x54>
+236,242d193
+< /fiq-debugger: compatible = "rockchip,fiq-debugger"
+< /fiq-debugger: interrupts = <0x0 0x7d 0x4>
+< /fiq-debugger: rockchip,baudrate = <0x1c200>
+< /fiq-debugger: rockchip,irq-mode-enable = <0x1>
+< /fiq-debugger: rockchip,serial-id = <0x2>
+< /fiq-debugger: rockchip,wake-irq = <0x0>
+< /fiq-debugger: status = "okay"
+272a224,244
+> /i2c@ff460000/focaltech@38: compatible = "focaltech,fts"
+> /i2c@ff460000/focaltech@38: focaltech,display-coords = <0x0 0x0 0x31f 0x1df>
+> /i2c@ff460000/focaltech@38: focaltech,irq-gpio = <&/pinctrl/gpio@ff380000 0x1 0x8>
+> /i2c@ff460000/focaltech@38: focaltech,max-touch-number = <0x5>
+> /i2c@ff460000/focaltech@38: focaltech,reset-gpio = <&/pinctrl/gpio@ff530000 0x8 0x1>
+> /i2c@ff460000/focaltech@38: interrupt-parent = <&/pinctrl/gpio@ff380000>
+> /i2c@ff460000/focaltech@38: interrupts = <0x1 0x2>
+> /i2c@ff460000/focaltech@38: reg = <0x38>
+> /i2c@ff460000/focaltech@38: status = "okay"
+> /i2c@ff460000/hynitron_cst836u@15: compatible = "hyn,7xx"
+> /i2c@ff460000/hynitron_cst836u@15: display-coords = <0x0 0x0 0x320 0x1e0>
+> /i2c@ff460000/hynitron_cst836u@15: interrupt-parent = <&/pinctrl/gpio@ff380000>
+> /i2c@ff460000/hynitron_cst836u@15: interrupts = <0x1 0x2>
+> /i2c@ff460000/hynitron_cst836u@15: irq-gpio = <&/pinctrl/gpio@ff380000 0x1 0x8>
+> /i2c@ff460000/hynitron_cst836u@15: max-touch-number = <0x1>
+> /i2c@ff460000/hynitron_cst836u@15: pos-swap = <0x0>
+> /i2c@ff460000/hynitron_cst836u@15: posx-reverse = <0x0>
+> /i2c@ff460000/hynitron_cst836u@15: posy-reverse = <0x0>
+> /i2c@ff460000/hynitron_cst836u@15: reg = <0x15>
+> /i2c@ff460000/hynitron_cst836u@15: reset-gpio = <&/pinctrl/gpio@ff530000 0x8 0x1>
+> /i2c@ff460000/hynitron_cst836u@15: status = "okay"
+274a247
+> /i2c@ff460000: clock-frequency = <0x186a0>
+279c252
+< /i2c@ff460000: pinctrl-0 = <&/pinctrl/i2c3/i2c3m0-xfer>
+---
+> /i2c@ff460000: pinctrl-0 = <&/pinctrl/i2c3/i2c3m2-xfer>
+282,324c255,261
+< /i2c@ff460000: status = "disabled"
+< /i2c@ff470000/sc3336@30/port/endpoint: data-lanes = <0x1 0x2>
+< /i2c@ff470000/sc3336@30/port/endpoint: remote-endpoint = <&/csi2-dphy0/ports/port@0/endpoint@0>
+< /i2c@ff470000/sc3336@30: clock-names = "xvclk"
+< /i2c@ff470000/sc3336@30: clocks = <&/clock-controller@ff3a0000 0xa5>
+< /i2c@ff470000/sc3336@30: compatible = "smartsens,sc3336"
+< /i2c@ff470000/sc3336@30: pinctrl-0 = <&/pinctrl/mipi/mipi-refclk-out0>
+< /i2c@ff470000/sc3336@30: pinctrl-names = "default"
+< /i2c@ff470000/sc3336@30: pwdn-gpios = <&/pinctrl/gpio@ff550000 0x15 0x0>
+< /i2c@ff470000/sc3336@30: reg = <0x30>
+< /i2c@ff470000/sc3336@30: rockchip,camera-module-facing = "back"
+< /i2c@ff470000/sc3336@30: rockchip,camera-module-index = <0x0>
+< /i2c@ff470000/sc3336@30: rockchip,camera-module-lens-name = "30IRC-F16"
+< /i2c@ff470000/sc3336@30: rockchip,camera-module-name = "CMK-OT2119-PC1"
+< /i2c@ff470000/sc3336@30: status = "okay"
+< /i2c@ff470000/sc4336@30/port/endpoint: data-lanes = <0x1 0x2>
+< /i2c@ff470000/sc4336@30/port/endpoint: remote-endpoint = <&/csi2-dphy0/ports/port@0/endpoint@1>
+< /i2c@ff470000/sc4336@30: clock-names = "xvclk"
+< /i2c@ff470000/sc4336@30: clocks = <&/clock-controller@ff3a0000 0xa5>
+< /i2c@ff470000/sc4336@30: compatible = "smartsens,sc4336"
+< /i2c@ff470000/sc4336@30: pinctrl-0 = <&/pinctrl/mipi/mipi-refclk-out0>
+< /i2c@ff470000/sc4336@30: pinctrl-names = "default"
+< /i2c@ff470000/sc4336@30: pwdn-gpios = <&/pinctrl/gpio@ff550000 0x15 0x0>
+< /i2c@ff470000/sc4336@30: reg = <0x30>
+< /i2c@ff470000/sc4336@30: rockchip,camera-module-facing = "back"
+< /i2c@ff470000/sc4336@30: rockchip,camera-module-index = <0x0>
+< /i2c@ff470000/sc4336@30: rockchip,camera-module-lens-name = "40IRC_F16"
+< /i2c@ff470000/sc4336@30: rockchip,camera-module-name = "OT01"
+< /i2c@ff470000/sc4336@30: status = "okay"
+< /i2c@ff470000/sc530ai@30/port/endpoint: data-lanes = <0x1 0x2>
+< /i2c@ff470000/sc530ai@30/port/endpoint: remote-endpoint = <&/csi2-dphy0/ports/port@0/endpoint@2>
+< /i2c@ff470000/sc530ai@30: clock-names = "xvclk"
+< /i2c@ff470000/sc530ai@30: clocks = <&/clock-controller@ff3a0000 0xa5>
+< /i2c@ff470000/sc530ai@30: compatible = "smartsens,sc530ai"
+< /i2c@ff470000/sc530ai@30: pinctrl-0 = <&/pinctrl/mipi/mipi-refclk-out0>
+< /i2c@ff470000/sc530ai@30: pinctrl-names = "default"
+< /i2c@ff470000/sc530ai@30: pwdn-gpios = <&/pinctrl/gpio@ff550000 0x15 0x0>
+< /i2c@ff470000/sc530ai@30: reg = <0x30>
+< /i2c@ff470000/sc530ai@30: rockchip,camera-module-facing = "back"
+< /i2c@ff470000/sc530ai@30: rockchip,camera-module-index = <0x0>
+< /i2c@ff470000/sc530ai@30: rockchip,camera-module-lens-name = "30IRC-F16"
+< /i2c@ff470000/sc530ai@30: rockchip,camera-module-name = "CMK-OT2115-PC1"
+< /i2c@ff470000/sc530ai@30: status = "okay"
+---
+> /i2c@ff460000: status = "okay"
+> /i2c@ff470000/xpt7603@48: compatible = "xpt7603"
+> /i2c@ff470000/xpt7603@48: gpio_irq = <0x2e 0x1 0x8>
+> /i2c@ff470000/xpt7603@48: max-x = <0x1e0>
+> /i2c@ff470000/xpt7603@48: max-y = <0x110>
+> /i2c@ff470000/xpt7603@48: reg = <0x48>
+> /i2c@ff470000/xpt7603@48: status = "okay"
+332c269
+< /i2c@ff470000: pinctrl-0 = <&/pinctrl/i2c4/i2c4m2-xfer>
+---
+> /i2c@ff470000: pinctrl-0 = <&/pinctrl/i2c4/i2c4m0-xfer>
+335,347c272
+< /i2c@ff470000: status = "okay"
+< /i2s@ffae0000: #sound-dai-cells = <0x0>
+< /i2s@ffae0000: clock-names = "mclk_tx", "mclk_rx", "hclk"
+< /i2s@ffae0000: clocks = <&/clock-controller@ff3a0000 0x9f, &/clock-controller@ff3a0000 0x9e, &/clock-controller@ff3a0000 0x31>
+< /i2s@ffae0000: compatible = "rockchip,rv1106-i2s-tdm"
+< /i2s@ffae0000: dma-names = "tx", "rx"
+< /i2s@ffae0000: dmas = <&/dma-controller@ff420000 0x16, &/dma-controller@ff420000 0x15>
+< /i2s@ffae0000: interrupts = <0x0 0x50 0x4>
+< /i2s@ffae0000: reg = <0xffae0000 0x1000>
+< /i2s@ffae0000: reset-names = "tx-m", "rx-m"
+< /i2s@ffae0000: resets = <&/clock-controller@ff3a0000 0x4805f, &/clock-controller@ff3a0000 0x48066>
+< /i2s@ffae0000: rockchip,clk-trcm = <0x1>
+< /i2s@ffae0000: status = "okay"
+---
+> /i2c@ff470000: status = "disabled"
+354,388c279,283
+< /mipi-csi2-hw@ffa20000: clock-names = "pclk_csi2host", "clk_rxbyte_hs"
+< /mipi-csi2-hw@ffa20000: clocks = <&/clock-controller@ff3a0000 0xdd, &/clock-controller@ff3a0000 0xde>
+< /mipi-csi2-hw@ffa20000: compatible = "rockchip,rv1106-mipi-csi2-hw"
+< /mipi-csi2-hw@ffa20000: interrupt-names = "csi-intr1", "csi-intr2"
+< /mipi-csi2-hw@ffa20000: interrupts = <0x0 0x63 0x4 0x0 0x64 0x4>
+< /mipi-csi2-hw@ffa20000: reg = <0xffa20000 0x10000>
+< /mipi-csi2-hw@ffa20000: reg-names = "csihost_regs"
+< /mipi-csi2-hw@ffa20000: reset-names = "srst_csihost_p"
+< /mipi-csi2-hw@ffa20000: resets = <&/clock-controller@ff3a0000 0x50014>
+< /mipi-csi2-hw@ffa20000: status = "okay"
+< /mipi-csi2-hw@ffa30000: clock-names = "pclk_csi2host", "clk_rxbyte_hs"
+< /mipi-csi2-hw@ffa30000: clocks = <&/clock-controller@ff3a0000 0xdf, &/clock-controller@ff3a0000 0xe0>
+< /mipi-csi2-hw@ffa30000: compatible = "rockchip,rv1106-mipi-csi2-hw"
+< /mipi-csi2-hw@ffa30000: interrupt-names = "csi-intr1", "csi-intr2"
+< /mipi-csi2-hw@ffa30000: interrupts = <0x0 0x65 0x4 0x0 0x66 0x4>
+< /mipi-csi2-hw@ffa30000: reg = <0xffa30000 0x10000>
+< /mipi-csi2-hw@ffa30000: reg-names = "csihost_regs"
+< /mipi-csi2-hw@ffa30000: reset-names = "srst_csihost_p"
+< /mipi-csi2-hw@ffa30000: resets = <&/clock-controller@ff3a0000 0x50016>
+< /mipi-csi2-hw@ffa30000: status = "okay"
+< /mipi0-csi2/ports/port@0/endpoint@1: reg = <0x1>
+< /mipi0-csi2/ports/port@0/endpoint@1: remote-endpoint = <&/csi2-dphy0/ports/port@1/endpoint@0>
+< /mipi0-csi2/ports/port@0: #address-cells = <0x1>
+< /mipi0-csi2/ports/port@0: #size-cells = <0x0>
+< /mipi0-csi2/ports/port@0: reg = <0x0>
+< /mipi0-csi2/ports/port@1/endpoint@0: reg = <0x0>
+< /mipi0-csi2/ports/port@1/endpoint@0: remote-endpoint = <&/rkcif-mipi-lvds/port/endpoint>
+< /mipi0-csi2/ports/port@1: #address-cells = <0x1>
+< /mipi0-csi2/ports/port@1: #size-cells = <0x0>
+< /mipi0-csi2/ports/port@1: reg = <0x1>
+< /mipi0-csi2/ports: #address-cells = <0x1>
+< /mipi0-csi2/ports: #size-cells = <0x0>
+< /mipi0-csi2: compatible = "rockchip,rv1106-mipi-csi2"
+< /mipi0-csi2: rockchip,hw = <&/mipi-csi2-hw@ffa20000 &/mipi-csi2-hw@ffa30000>
+< /mipi0-csi2: status = "okay"
+---
+> /mmc@ff9a0000: bus-width = <0x4>
+> /mmc@ff9a0000: cap-sd-highspeed = []
+> /mmc@ff9a0000: cap-sdio-irq = []
+> /mmc@ff9a0000: clock-freq-min-max = <0x30d40 0x2faf080>
+> /mmc@ff9a0000: clock-frequency = <0x1312d00>
+394c289,296
+< /mmc@ff9a0000: max-frequency = <0xbebc200>
+---
+> /mmc@ff9a0000: keep-power-in-suspend = []
+> /mmc@ff9a0000: max-frequency = <0x4c4b40>
+> /mmc@ff9a0000: no-mmc = []
+> /mmc@ff9a0000: no-sd = []
+> /mmc@ff9a0000: non-removable = []
+> /mmc@ff9a0000: num-slots = <0x1>
+> /mmc@ff9a0000: pinctrl-0 = <&/pinctrl/sdmmc1/sdmmc1m0-cmd &/pinctrl/sdmmc1/sdmmc1m0-clk &/pinctrl/sdmmc1/sdmmc1m0-bus4>
+> /mmc@ff9a0000: pinctrl-names = "default"
+396a299,301
+> /mmc@ff9a0000: supports-sdio = []
+> /mmc@ffa90000: bus-width = <0x8>
+> /mmc@ffa90000: cap-mmc-highspeed = []
+402a308,312
+> /mmc@ffa90000: mmc-ddr-1_8v = []
+> /mmc@ffa90000: mmc-hs200-1_8v = []
+> /mmc@ffa90000: no-sd = []
+> /mmc@ffa90000: no-sdio = []
+> /mmc@ffa90000: non-removable = []
+404,405c314,315
+< /mmc@ffa90000: rockchip,use-v2-tuning = []
+< /mmc@ffa90000: status = "disabled"
+---
+> /mmc@ffa90000: rockchip,default-sample-phase = <0x5a>
+> /mmc@ffa90000: status = "okay"
+407d316
+< /mmc@ffaa0000: cap-mmc-highspeed = []
+408a318,320
+> /mmc@ffaa0000: cap-sdio-irq = []
+> /mmc@ffaa0000: clock-freq-min-max = <0x30d40 0x2faf080>
+> /mmc@ffaa0000: clock-frequency = <0x1312d00>
+412d323
+< /mmc@ffaa0000: disable-wp = []
+414a326
+> /mmc@ffaa0000: keep-power-in-suspend = []
+417,420c329,333
+< /mmc@ffaa0000: no-sdio = []
+< /mmc@ffaa0000: pinctrl-0 = <&/pinctrl/sdmmc0/sdmmc0-clk &/pinctrl/sdmmc0/sdmmc0-cmd &/pinctrl/sdmmc0/sdmmc0-det &/pinctrl/sdmmc0/sdmmc0-bus4>
+< /mmc@ffaa0000: pinctrl-1 = <&/pinctrl/sdmmc0/sdmmc0-idle-pins &/pinctrl/sdmmc0/sdmmc0-det>
+< /mmc@ffaa0000: pinctrl-names = "normal", "idle"
+---
+> /mmc@ffaa0000: no-sd = []
+> /mmc@ffaa0000: non-removable = []
+> /mmc@ffaa0000: num-slots = <0x1>
+> /mmc@ffaa0000: pinctrl-0 = <&/pinctrl/sdmmc0/sdmmc0-cmd &/pinctrl/sdmmc0/sdmmc0-clk &/pinctrl/sdmmc0/sdmmc0-bus4>
+> /mmc@ffaa0000: pinctrl-names = "default"
+423c336
+< /mmc@ffaa0000: vmmc-supply = <&/vcc3v3-sd>
+---
+> /mmc@ffaa0000: supports-sdio = []
+454a368,391
+> /panel/display-timings/timing0: clock-frequency = <0x1dcd650>
+> /panel/display-timings/timing0: de-active = <0x0>
+> /panel/display-timings/timing0: hactive = <0x320>
+> /panel/display-timings/timing0: hback-porch = <0x8>
+> /panel/display-timings/timing0: hfront-porch = <0x8>
+> /panel/display-timings/timing0: hsync-active = <0x0>
+> /panel/display-timings/timing0: hsync-len = <0x4>
+> /panel/display-timings/timing0: pixelclk-active = <0x0>
+> /panel/display-timings/timing0: vactive = <0x1e0>
+> /panel/display-timings/timing0: vback-porch = <0x8>
+> /panel/display-timings/timing0: vfront-porch = <0x8>
+> /panel/display-timings/timing0: vsync-active = <0x0>
+> /panel/display-timings/timing0: vsync-len = <0x4>
+> /panel/display-timings: native-mode = <&/panel/display-timings/timing0>
+> /panel/port/endpoint: remote-endpoint = <&/syscon@ff000000/rgb/ports/port@1/endpoint@0>
+> /panel: backlight = <&/backlight>
+> /panel: bus-format = <0x1009>
+> /panel: compatible = "simple-panel"
+> /panel: enable-delay-ms = <0x14>
+> /panel: enable-gpios = []
+> /panel: reset-delay-ms = <0xa>
+> /panel: reset-gpios = []
+> /panel: reset-value = <0x0>
+> /panel: status = "okay"
+504,505c441,443
+< /pinctrl/i2c3/i2c3m0-xfer: rockchip,pins = <0x2 0x6 0x5 &/pinctrl/pcfg-pull-none-smt, 0x2 0x7 0x5 &/pinctrl/pcfg-pull-none-smt>
+< /pinctrl/i2c4/i2c4m2-xfer: rockchip,pins = <0x3 0x17 0x3 &/pinctrl/pcfg-pull-none-smt, 0x3 0x18 0x3 &/pinctrl/pcfg-pull-none-smt>
+---
+> /pinctrl/i2c3/i2c3m2-xfer: rockchip,pins = <0x3 0x19 0x3 &/pinctrl/pcfg-pull-none-smt, 0x3 0x1a 0x3 &/pinctrl/pcfg-pull-none-smt>
+> /pinctrl/i2c4/i2c4m0-xfer: rockchip,pins = <0x2 0x1 0x5 &/pinctrl/pcfg-pull-none-smt, 0x2 0x0 0x5 &/pinctrl/pcfg-pull-none-smt>
+> /pinctrl/lcd/lcd-pins: rockchip,pins = <0x1 0x1b 0x1 &/pinctrl/pcfg-pull-none-drv-level-4, 0x1 0x17 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x16 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x15 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x14 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x13 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x12 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x11 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x10 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x0 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x1 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x2 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x3 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x4 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x5 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x6 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x7 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x8 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x2 0x9 0x3 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x18 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x19 0x1 &/pinctrl/pcfg-pull-none-drv-level-3, 0x1 0x1a 0x1 &/pinctrl/pcfg-pull-none-drv-level-3>
+508d445
+< /pinctrl/pcfg-pull-down: bias-pull-down = []
+524c461
+< /pinctrl/pwm1/pwm1m0-pins: rockchip,pins = <0x0 0x4 0x2 &/pinctrl/pcfg-pull-none>
+---
+> /pinctrl/pwm1/pwm1m2-pins: rockchip,pins = <0x3 0x1b 0x2 &/pinctrl/pcfg-pull-none>
+532c469
+< /pinctrl/pwm7/pwm7m0-pins: rockchip,pins = <0x1 0x0 0x3 &/pinctrl/pcfg-pull-none>
+---
+> /pinctrl/pwm7/pwm7m2-pins: rockchip,pins = <0x3 0x16 0x2 &/pinctrl/pcfg-pull-none>
+539,540c476,478
+< /pinctrl/sdmmc0/sdmmc0-det: rockchip,pins = <0x3 0x1 0x1 &/pinctrl/pcfg-pull-up>
+< /pinctrl/sdmmc0/sdmmc0-idle-pins: rockchip,pins = <0x3 0x2 0x0 &/pinctrl/pcfg-pull-down, 0x3 0x3 0x0 &/pinctrl/pcfg-pull-down, 0x3 0x4 0x0 &/pinctrl/pcfg-pull-down, 0x3 0x5 0x0 &/pinctrl/pcfg-pull-down, 0x3 0x6 0x0 &/pinctrl/pcfg-pull-down, 0x3 0x7 0x0 &/pinctrl/pcfg-pull-down>
+---
+> /pinctrl/sdmmc1/sdmmc1m0-bus4: rockchip,pins = <0x2 0x1 0x1 &/pinctrl/pcfg-pull-up-drv-level-2, 0x2 0x0 0x1 &/pinctrl/pcfg-pull-up-drv-level-2, 0x2 0x5 0x1 &/pinctrl/pcfg-pull-up-drv-level-2, 0x2 0x4 0x1 &/pinctrl/pcfg-pull-up-drv-level-2>
+> /pinctrl/sdmmc1/sdmmc1m0-clk: rockchip,pins = <0x2 0x2 0x1 &/pinctrl/pcfg-pull-up-drv-level-2>
+> /pinctrl/sdmmc1/sdmmc1m0-cmd: rockchip,pins = <0x2 0x3 0x1 &/pinctrl/pcfg-pull-up-drv-level-2>
+547c485
+< /pinctrl/uart0/uart0m0-xfer: rockchip,pins = <0x0 0x0 0x1 &/pinctrl/pcfg-pull-up, 0x0 0x1 0x1 &/pinctrl/pcfg-pull-up>
+---
+> /pinctrl/uart0/uart0m1-xfer: rockchip,pins = <0x2 0x8 0x1 &/pinctrl/pcfg-pull-up, 0x2 0x9 0x1 &/pinctrl/pcfg-pull-up>
+554,557c492,496
+< /pinctrl/uart5/uart5m0-ctsn: rockchip,pins = <0x3 0x5 0x2 &/pinctrl/pcfg-pull-none>
+< /pinctrl/uart5/uart5m0-rtsn: rockchip,pins = <0x3 0x4 0x2 &/pinctrl/pcfg-pull-none>
+< /pinctrl/uart5/uart5m0-xfer: rockchip,pins = <0x3 0x7 0x2 &/pinctrl/pcfg-pull-up, 0x3 0x6 0x2 &/pinctrl/pcfg-pull-up>
+< /pinctrl/wcc3v3_wifi/wifi-pwren: rockchip,pins = <0x0 0x3 0x0 &/pinctrl/pcfg-pull-down>
+---
+> /pinctrl/uart5/uart5m2-xfer: rockchip,pins = <0x3 0x18 0x2 &/pinctrl/pcfg-pull-up, 0x3 0x17 0x2 &/pinctrl/pcfg-pull-up>
+> /pinctrl/wcc3v3_backlight/backlight-pwren: rockchip,pins = <0x0 0x0 0x0 &/pinctrl/pcfg-pull-up>
+> /pinctrl/wcc3v3_lcd/lcd-pwren: rockchip,pins = <0x1 0x8 0x0 &/pinctrl/pcfg-pull-up>
+> /pinctrl/wcc3v3_wifi/wifi-pwren: rockchip,pins = <0x0 0x3 0x0 &/pinctrl/pcfg-pull-none>
+> /pinctrl/wireless_bluetooth/uart1-rts-gpio: rockchip,pins = <0x0 0x5 0x0 &/pinctrl/pcfg-pull-none>
+564,567d502
+< /power-management@ff300000: compatible = "rockchip,rv1106-pmu", "syscon"
+< /power-management@ff300000: reg = <0xff300000 0x1000>
+< /psci: compatible = "arm,psci-1.0"
+< /psci: method = "smc"
+590d524
+< /pwm@ff350000: interrupts = <0x0 0x1f 0x4>
+599,600c533
+< /pwm@ff350010: interrupts = <0x0 0x1f 0x4>
+< /pwm@ff350010: pinctrl-0 = <&/pinctrl/pwm1/pwm1m0-pins>
+---
+> /pwm@ff350010: pinctrl-0 = <&/pinctrl/pwm1/pwm1m2-pins>
+603c536
+< /pwm@ff350010: status = "disabled"
+---
+> /pwm@ff350010: status = "okay"
+608d540
+< /pwm@ff350020: interrupts = <0x0 0x1f 0x4>
+626d557
+< /pwm@ff360000: interrupts = <0x0 0x21 0x4>
+635d565
+< /pwm@ff360010: interrupts = <0x0 0x21 0x4>
+644d573
+< /pwm@ff360020: interrupts = <0x0 0x21 0x4>
+654c583
+< /pwm@ff360030: pinctrl-0 = <&/pinctrl/pwm7/pwm7m0-pins>
+---
+> /pwm@ff360030: pinctrl-0 = <&/pinctrl/pwm7/pwm7m2-pins>
+662d590
+< /pwm@ff490000: interrupts = <0x0 0x23 0x4>
+671d598
+< /pwm@ff490010: interrupts = <0x0 0x23 0x4>
+680d606
+< /pwm@ff490020: interrupts = <0x0 0x23 0x4>
+694c620,629
+< /restart-poweroff: compatible = "restart-poweroff"
+---
+> /reserved-memory/drm-logo@00000000: compatible = "rockchip,drm-logo"
+> /reserved-memory/drm-logo@00000000: reg = <0x0 0x0>
+> /reserved-memory/linux,cma: compatible = "shared-dma-pool"
+> /reserved-memory/linux,cma: inactive = []
+> /reserved-memory/linux,cma: linux,cma-default = []
+> /reserved-memory/linux,cma: reusable = []
+> /reserved-memory/linux,cma: size = <0x1000000>
+> /reserved-memory: #address-cells = <0x1>
+> /reserved-memory: #size-cells = <0x1>
+> /reserved-memory: ranges = []
+708c643
+< /rkcif-mipi-lvds/port/endpoint: remote-endpoint = <&/mipi0-csi2/ports/port@1/endpoint@0>
+---
+> /rkcif-mipi-lvds/port/endpoint: remote-endpoint = <0x16>
+716c651
+< /rkcif-mipi-lvds: status = "okay"
+---
+> /rkcif-mipi-lvds: status = "disabled"
+789,791d723
+< /rockchip-suspend: compatible = "rockchip,pm-config"
+< /rockchip-suspend: rockchip,sleep-io-config = <0x800 0x10800 0x20800 0x30400 0x40400 0x50000 0x60000>
+< /rockchip-suspend: status = "okay"
+816c748
+< /serial@ff4a0000: pinctrl-0 = <&/pinctrl/uart0/uart0m0-xfer>
+---
+> /serial@ff4a0000: pinctrl-0 = <&/pinctrl/uart0/uart0m1-xfer>
+828c760
+< /serial@ff4b0000: pinctrl-0 = <&/pinctrl/uart1/uart1m0-xfer &/pinctrl/uart1/uart1m0-ctsn &/pinctrl/uart1/uart1m0-rtsn>
+---
+> /serial@ff4b0000: pinctrl-0 = <&/pinctrl/uart1/uart1m0-xfer &/pinctrl/uart1/uart1m0-ctsn>
+833c765
+< /serial@ff4b0000: status = "disabled"
+---
+> /serial@ff4b0000: status = "okay"
+857c789
+< /serial@ff4d0000: status = "disabled"
+---
+> /serial@ff4d0000: status = "okay"
+876c808
+< /serial@ff4f0000: pinctrl-0 = <&/pinctrl/uart5/uart5m0-xfer &/pinctrl/uart5/uart5m0-ctsn &/pinctrl/uart5/uart5m0-rtsn>
+---
+> /serial@ff4f0000: pinctrl-0 = <&/pinctrl/uart5/uart5m2-xfer>
+881c813
+< /serial@ff4f0000: status = "disabled"
+---
+> /serial@ff4f0000: status = "okay"
+893a826,841
+> /spi@ff510000/spi_test1@0: #address-cells = <0x1>
+> /spi@ff510000/spi_test1@0: #size-cells = <0x0>
+> /spi@ff510000/spi_test1@0: compatible = "charlie,spidev"
+> /spi@ff510000/spi_test1@0: reg = <0x0>
+> /spi@ff510000/spi_test1@0: spi-cpha = <0x1>
+> /spi@ff510000/spi_test1@0: spi-cpol = <0x1>
+> /spi@ff510000/spi_test1@0: spi-max-frequency = <0x4c4b40>
+> /spi@ff510000/spi_test1@0: status = "okay"
+> /spi@ff510000/spi_test2@1: #address-cells = <0x1>
+> /spi@ff510000/spi_test2@1: #size-cells = <0x0>
+> /spi@ff510000/spi_test2@1: compatible = "charlie,spidev"
+> /spi@ff510000/spi_test2@1: reg = <0x1>
+> /spi@ff510000/spi_test2@1: spi-cpha = <0x1>
+> /spi@ff510000/spi_test2@1: spi-cpol = <0x1>
+> /spi@ff510000/spi_test2@1: spi-max-frequency = <0x4c4b40>
+> /spi@ff510000/spi_test2@1: status = "okay"
+896,897d843
+< /spi@ff510000: assigned-clock-rates = <0xbebc200>
+< /spi@ff510000: assigned-clocks = <&/clock-controller@ff3a0000 0x4f>
+903a850,851
+> /spi@ff510000: max-freq = <0x4c4b40>
+> /spi@ff510000: num-cs = <0x2>
+914a863,864
+> /spi@ffac0000: assigned-clock-rates = <0x47868c0>
+> /spi@ffac0000: assigned-clocks = <&/clock-controller@ff3a0000 0x3e>
+921,922c871,872
+< /sram@ff6c0000/hpmcu-sram@3e000: reg = <0x3e000 0x2000>
+< /sram@ff6c0000/rkisp-sram@0: reg = <0x0 0x3e000>
+---
+> /sram@ff6c0000/hpmcu-sram@3f000: reg = <0x3f000 0x1000>
+> /sram@ff6c0000/rkisp-sram@0: reg = <0x0 0x3f000>
+940a891,907
+> /syscon@ff000000/rgb/ports/port@0/endpoint@0: reg = <0x0>
+> /syscon@ff000000/rgb/ports/port@0/endpoint@0: remote-endpoint = <&/vop@ff990000/port/endpoint@0>
+> /syscon@ff000000/rgb/ports/port@0/endpoint@0: status = "okay"
+> /syscon@ff000000/rgb/ports/port@0: #address-cells = <0x1>
+> /syscon@ff000000/rgb/ports/port@0: #size-cells = <0x0>
+> /syscon@ff000000/rgb/ports/port@0: reg = <0x0>
+> /syscon@ff000000/rgb/ports/port@1/endpoint@0: reg = <0x0>
+> /syscon@ff000000/rgb/ports/port@1/endpoint@0: remote-endpoint = <&/panel/port/endpoint>
+> /syscon@ff000000/rgb/ports/port@1: #address-cells = <0x1>
+> /syscon@ff000000/rgb/ports/port@1: #size-cells = <0x0>
+> /syscon@ff000000/rgb/ports/port@1: reg = <0x1>
+> /syscon@ff000000/rgb/ports: #address-cells = <0x1>
+> /syscon@ff000000/rgb/ports: #size-cells = <0x0>
+> /syscon@ff000000/rgb: compatible = "rockchip,rv1106-rgb"
+> /syscon@ff000000/rgb: pinctrl-0 = <&/pinctrl/lcd/lcd-pins>
+> /syscon@ff000000/rgb: pinctrl-names = "default"
+> /syscon@ff000000/rgb: status = "okay"
+965c932
+< /timer: interrupts = <0x1 0xd 0x104 0x1 0xe 0x104>
+---
+> /timer: interrupts = <0x1 0xd 0x104>
+980c947
+< /tsadc@ff3c8000: status = "okay"
+---
+> /tsadc@ff3c8000: status = "disabled"
+984c951
+< /usb2-phy@ff3e0000/otg-port: status = "disabled"
+---
+> /usb2-phy@ff3e0000/otg-port: status = "okay"
+992,993c959,986
+< /usb2-phy@ff3e0000: rockchip,usbgrf = <0x6>
+< /usb2-phy@ff3e0000: status = "disabled"
+---
+> /usb2-phy@ff3e0000: rockchip,usbgrf = <0x5>
+> /usb2-phy@ff3e0000: status = "okay"
+> /usbdrd/usb@ffb00000: compatible = "snps,dwc3"
+> /usbdrd/usb@ffb00000: dr_mode = "host"
+> /usbdrd/usb@ffb00000: extcon = <0x5c>
+> /usbdrd/usb@ffb00000: interrupts = <0x0 0x36 0x4>
+> /usbdrd/usb@ffb00000: maximum-speed = "high-speed"
+> /usbdrd/usb@ffb00000: phy-names = "usb2-phy"
+> /usbdrd/usb@ffb00000: phy_type = "utmi_wide"
+> /usbdrd/usb@ffb00000: phys = <&/usb2-phy@ff3e0000/otg-port>
+> /usbdrd/usb@ffb00000: reg = <0xffb00000 0x100000>
+> /usbdrd/usb@ffb00000: reset-names = "usb3-otg"
+> /usbdrd/usb@ffb00000: resets = <&/clock-controller@ff3a0000 0x48047>
+> /usbdrd/usb@ffb00000: snps,dis-del-phy-power-chg-quirk = []
+> /usbdrd/usb@ffb00000: snps,dis-tx-ipgap-linecheck-quirk = []
+> /usbdrd/usb@ffb00000: snps,dis-u2-freeclk-exists-quirk = []
+> /usbdrd/usb@ffb00000: snps,dis_enblslpm_quirk = []
+> /usbdrd/usb@ffb00000: snps,dis_u2_susphy_quirk = []
+> /usbdrd/usb@ffb00000: snps,usb2-gadget-lpm-disable = []
+> /usbdrd/usb@ffb00000: snps,usb2-lpm-disable = []
+> /usbdrd/usb@ffb00000: status = "okay"
+> /usbdrd: #address-cells = <0x1>
+> /usbdrd: #size-cells = <0x1>
+> /usbdrd: clock-names = "ref", "utmi", "bus"
+> /usbdrd: clocks = <&/clock-controller@ff3a0000 0x65, &/clock-controller@ff3a0000 0x66, &/clock-controller@ff3a0000 0x64>
+> /usbdrd: compatible = "rockchip,rv1106-dwc3", "rockchip,rk3399-dwc3"
+> /usbdrd: ranges = []
+> /usbdrd: status = "okay"
+1006,1012d998
+< /vcc3v3-sd: compatible = "regulator-fixed"
+< /vcc3v3-sd: gpio = <&/pinctrl/gpio@ff380000 0x1 0x1>
+< /vcc3v3-sd: pinctrl-0 = <&/pinctrl/sdmmc/sdmmc-pwren>
+< /vcc3v3-sd: pinctrl-names = "default"
+< /vcc3v3-sd: regulator-max-microvolt = <0x325aa0>
+< /vcc3v3-sd: regulator-min-microvolt = <0x325aa0>
+< /vcc3v3-sd: regulator-name = "vcc3v3_sd"
+1014,1015c1000,1001
+< /vcc3v3-wifi: enable-active-low = []
+< /vcc3v3-wifi: gpio = <&/pinctrl/gpio@ff380000 0x3 0x1>
+---
+> /vcc3v3-wifi: enable-active-high = []
+> /vcc3v3-wifi: gpio = <&/pinctrl/gpio@ff380000 0x3 0x0>
+1024c1010
+< /vdd-arm: pwms = <&/pwm@ff350000 0x0 0x1388 0x1>
+---
+> /vdd-arm: pwms = <&/pwm@ff360030 0x0 0x1388 0x1>
+1031a1018,1040
+> /vop@ff990000/port/endpoint@0: reg = <0x0>
+> /vop@ff990000/port/endpoint@0: remote-endpoint = <&/syscon@ff000000/rgb/ports/port@0/endpoint@0>
+> /vop@ff990000/port: #address-cells = <0x1>
+> /vop@ff990000/port: #size-cells = <0x0>
+> /vop@ff990000: clock-names = "aclk_vop", "dclk_vop", "hclk_vop"
+> /vop@ff990000: clocks = <&/clock-controller@ff3a0000 0x11b, &/clock-controller@ff3a0000 0x11a, &/clock-controller@ff3a0000 0x119>
+> /vop@ff990000: compatible = "rockchip,rv1106-vop"
+> /vop@ff990000: interrupts = <0x0 0x59 0x4>
+> /vop@ff990000: reg = <0xff990000 0x200>
+> /vop@ff990000: reg-names = "regs"
+> /vop@ff990000: rockchip,grf = <&/syscon@ff000000>
+> /vop@ff990000: status = "okay"
+> /wireless-wlan: compatible = "wlan-platdata"
+> /wireless-wlan: pinctrl-names = "default"
+> /wireless-wlan: status = "okay"
+> /wireless-wlan: wifi_chip_type = "rtl8723ds"
+> /wireless_bluetooth: BT,reset_gpio = <&/pinctrl/gpio@ff380000 0x4 0x0>
+> /wireless_bluetooth: compatible = "bluetooth-platdata"
+> /wireless_bluetooth: pinctrl-0 = <&/pinctrl/uart1/uart1m0-rtsn>
+> /wireless_bluetooth: pinctrl-1 = <&/pinctrl/wireless_bluetooth/uart1-rts-gpio>
+> /wireless_bluetooth: pinctrl-names = "default", "rts_gpio"
+> /wireless_bluetooth: status = "okay"
+> /wireless_bluetooth: uart_rts_gpios = <&/pinctrl/gpio@ff380000 0x5 0x1>

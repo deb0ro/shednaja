@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# Wait until DNS works (Wi-Fi/DHCP come up in the background), set the clock once,
+# then run busybox ntpd as a daemon. Started in the background by S48ntpd.
+PEERS="-p 0.pool.ntp.org -p 1.pool.ntp.org -p 2.pool.ntp.org"
+i=0
+until nslookup pool.ntp.org > /dev/null 2>&1; do
+	i=$((i + 1))
+	[ $i -ge 150 ] && break
+	sleep 2
+done
+ntpd -n -q $PEERS > /dev/null 2>&1 && echo "ntp: clock set: $(date)" > /dev/kmsg
+exec ntpd -n $PEERS

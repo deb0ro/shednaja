@@ -1,0 +1,4 @@
+config BR2_PACKAGE_MAINSAIL
+	bool "mainsail"
+	help
+	  Mainsail web UI (static release zip) in /usr/share/mainsail.

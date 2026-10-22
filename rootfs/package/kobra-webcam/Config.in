@@ -1,0 +1,13 @@
+config BR2_PACKAGE_KOBRA_WEBCAM
+	bool "kobra-webcam"
+	depends on BR2_USE_MMU
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	depends on !BR2_STATIC_LIBS
+	select BR2_PACKAGE_MJPG_STREAMER
+	help
+	  The printer camera (UVC on the GL850G hub) as an MJPEG stream:
+	  mjpg-streamer (input_uvc + output_http) on 127.0.0.1:8080,
+	  started by S65webcam with the settings from
+	  printer_data/config/webcam.conf. lighttpd serves it as /webcam/.
+	  Removes the mjpg-streamer plugins, web pages and jpeg tools the
+	  printer does not use.

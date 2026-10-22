@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Buildroot post-build for the Kobra S1 rootfs. $1 = TARGET_DIR.
+# Inputs come from tools/build_rootfs.sh (exported KOBRA_* variables).
+set -euo pipefail
+T=$1
+: "${KOBRA_MODULES_TAR:?}" "${KOBRA_BTFW_DIR:?}" "${KOBRA_ROOT_HASH:?}"
+# KOBRA_AUTHORIZED_KEYS: empty for a release build (no key in the image)
+
+# kernel modules (our 5.10.160 build incl. RTL8723DS / hci_uart in extra/)
+rm -rf "$T/lib/modules"
+tar -xzf "$KOBRA_MODULES_TAR" -C "$T" lib/modules
+
+# BT firmware + config for rtk_hciattach (stock files from the ac_lib dump)
+install -D -m 0644 "$KOBRA_BTFW_DIR/rtl8723d_fw" "$T/lib/firmware/rtlbt/rtl8723d_fw"
+install -D -m 0644 "$KOBRA_BTFW_DIR/rtl8723d_config" "$T/lib/firmware/rtlbt/rtl8723d_config"
+
+# stock mount points; /data -> userdata like stock
+mkdir -p "$T/oem" "$T/userdata" "$T/useremain"
+ln -sfn userdata "$T/data"
+
+# root: the stock password hash (dropbear, getty/login), and SSH keys under the owner's
+# control in /userdata/shednaja/ssh (S00kobra-mounts creates it). Only a development build
+# (tools/build_rootfs.sh SSH_KEY=..., build id "+devkey") bakes a key into the image.
+rm -rf "$T/root/.ssh"
+if [ -n "${KOBRA_AUTHORIZED_KEYS:-}" ]; then
+	install -d -m 0700 "$T/root/.ssh"
+	install -m 0600 "$KOBRA_AUTHORIZED_KEYS" "$T/root/.ssh/authorized_keys"
+else
+	ln -s /userdata/shednaja/ssh "$T/root/.ssh"
+fi
+sed -i "s|^root:[^:]*:|root:${KOBRA_ROOT_HASH}:|" "$T/etc/shadow"
+# (post-fakeroot.sh turns /etc/shadow into a link to the owner's copy on /userdata)
+
+# persistent state on /userdata (rootfs is read-only squashfs)
+rm -rf "$T/etc/dropbear"; ln -s /run/dropbear-keys "$T/etc/dropbear"     # set up by S00kobra-mounts
+rm -rf "$T/var/lib/seedrng"; ln -s /userdata/shednaja/seedrng "$T/var/lib/seedrng"
+
+# step 2: printer_data defaults (copied to /useremain/shednaja/printer_data on first boot by
+# /usr/libexec/kobra/printer-data-init) + "~/printer_data" for root, as in the vanilla configs
+B=$(dirname "$0")
+mkdir -p "$T/usr/share/shednaja/printer_data"
+cp -a "$B/printer_data_defaults/." "$T/usr/share/shednaja/printer_data/"
+ln -sfn /useremain/shednaja/printer_data "$T/root/printer_data"
+# our S62lighttpd replaces Buildroot's S50lighttpd (needs printer_data dirs first)
+rm -f "$T/etc/init.d/S50lighttpd"
+# numpy's own test suites are about 4 MB uncompressed and never used on the printer
+find "$T/usr/lib/python3.11/site-packages/numpy" -type d -name tests -prune -exec rm -rf {} + 2>/dev/null || true
+
+# identification
+cat > "$T/usr/lib/os-release" <<EOF
+NAME="ShedNaja"
+ID=shednaja
+ID_LIKE=buildroot
+VERSION_ID=${KOBRA_VERSION:-0.1}
+PRETTY_NAME="shednaja ${KOBRA_VERSION:-0.1} (Kobra S1, Buildroot 2023.02.6)"
+BUILD_ID=${KOBRA_BUILD_ID:-unknown}
+EOF
+ln -sfn ../usr/lib/os-release "$T/etc/os-release"
+echo "kobra-s1" > "$T/etc/hostname"

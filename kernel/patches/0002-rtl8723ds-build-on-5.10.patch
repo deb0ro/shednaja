@@ -1,0 +1,320 @@
+Make the Rockchip RTL8723DS vendor driver (v5.10.1-20-g5af20e016, Luckfox SDK copy)
+build as an external module against the 5.10.160 kernel.
+
+- crc32(): driver function collides with the kernel's crc32() macro -> rtw_crypto_crc32
+- internal hostap SHA-256 collides with <crypto/sha.h> names -> rtw_sha256_*
+- struct sched_param moved to <uapi/linux/sched/types.h> (5.9)
+- procfs: struct file_operations -> struct proc_ops (5.6)
+- cfg80211: .mgmt_frame_register -> .update_mgmt_frame_registrations (5.8),
+  thin wrapper that keeps the driver's AUTH-frame-only handling
+- import the VFS_internal_... symbol namespace for filp_open/kernel_read/kernel_write
+  (Rockchip/GKI kernel; the stock module imports the same namespace)
+
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/rtw_crypto_wrap.h b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/rtw_crypto_wrap.h
+index faf21a7..b9e087d 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/rtw_crypto_wrap.h
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/rtw_crypto_wrap.h
+@@ -62,5 +62,7 @@ void wpa_printf(int level, const char *fmt, ...);
+ void wpa_hexdump(int level, const char *title, const void *buf, size_t len);
+ void wpa_hexdump_key(int level, const char *title, const void *buf, size_t len);
+ 
++#undef crc32
++#define crc32 rtw_crypto_crc32
+ u32 crc32(const u8 *frame, size_t frame_len);
+ #endif /* RTW_CRYTO_WRAP_H */
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/sha256_i.h b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/sha256_i.h
+index 105b7de..18036ae 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/sha256_i.h
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/crypto/sha256_i.h
+@@ -12,6 +12,12 @@
+ 
+ #define SHA256_BLOCK_SIZE 64
+ 
++/* avoid clashes with <crypto/sha.h> / lib/crypto/sha256.c */
++#define sha256_state rtw_sha256_state
++#define sha256_init rtw_sha256_init
++#define sha256_process rtw_sha256_process
++#define sha256_done rtw_sha256_done
++
+ struct sha256_state {
+ 	u64 length;
+ 	u32 state[8], curlen;
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_recv.c b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_recv.c
+index 7d81d25..6d27e23 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_recv.c
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_recv.c
+@@ -15,6 +15,10 @@
+  *****************************************************************************/
+ #define _RTW_RECV_C_
+ 
++#include <linux/version.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0))
++#include <uapi/linux/sched/types.h>
++#endif
+ #include <drv_types.h>
+ #include <hal_data.h>
+ 
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_xmit.c b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_xmit.c
+index 9d2e74c..16b5d40 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_xmit.c
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/core/rtw_xmit.c
+@@ -15,6 +15,10 @@
+  *****************************************************************************/
+ #define _RTW_XMIT_C_
+ 
++#include <linux/version.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0))
++#include <uapi/linux/sched/types.h>
++#endif
+ #include <drv_types.h>
+ #include <hal_data.h>
+ 
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/hal/rtl8723d/sdio/rtl8723ds_xmit.c b/drivers/net/wireless/rockchip_wlan/rtl8723ds/hal/rtl8723d/sdio/rtl8723ds_xmit.c
+index 21e4834..dabb27a 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/hal/rtl8723d/sdio/rtl8723ds_xmit.c
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/hal/rtl8723d/sdio/rtl8723ds_xmit.c
+@@ -15,6 +15,10 @@
+  *****************************************************************************/
+ #define _RTL8723DS_XMIT_C_
+ 
++#include <linux/version.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0))
++#include <uapi/linux/sched/types.h>
++#endif
+ #include <rtl8723d_hal.h>
+ 
+ static u8 rtw_sdio_wait_enough_TxOQT_space(PADAPTER padapter, u8 agg_num)
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/ioctl_cfg80211.c b/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/ioctl_cfg80211.c
+index 73ea276..ac85d4d 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/ioctl_cfg80211.c
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/ioctl_cfg80211.c
+@@ -7952,6 +7952,15 @@ exit:
+ 	return;
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
++static void cfg80211_rtw_update_mgmt_frame_register(struct wiphy *wiphy,
++	struct wireless_dev *wdev, struct mgmt_frame_regs *upd)
++{
++	cfg80211_rtw_mgmt_frame_register(wiphy, wdev, IEEE80211_STYPE_AUTH,
++		!!(upd->interface_stypes & BIT(IEEE80211_STYPE_AUTH >> 4)));
++}
++#endif
++
+ #if defined(CONFIG_TDLS) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0))
+ static int cfg80211_rtw_tdls_mgmt(struct wiphy *wiphy,
+ 	struct net_device *ndev,
+@@ -10359,7 +10368,11 @@ static struct cfg80211_ops rtw_cfg80211_ops = {
+ 
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
+ 	.mgmt_tx = cfg80211_rtw_mgmt_tx,
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
++	.update_mgmt_frame_registrations = cfg80211_rtw_update_mgmt_frame_register,
++#else
+ 	.mgmt_frame_register = cfg80211_rtw_mgmt_frame_register,
++#endif
+ #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34) && LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 35))
+ 	.action = cfg80211_rtw_mgmt_tx,
+ #endif
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/os_intfs.c b/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/os_intfs.c
+index 5af9110..98d73ec 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/os_intfs.c
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/os_intfs.c
+@@ -19,6 +19,9 @@
+ #include <hal_data.h>
+ 
+ MODULE_LICENSE("GPL");
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
++MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
++#endif
+ MODULE_DESCRIPTION("Realtek Wireless Lan Driver");
+ MODULE_AUTHOR("Realtek Semiconductor Corp.");
+ MODULE_VERSION(DRIVERVERSION);
+diff --git a/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/rtw_proc.c b/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/rtw_proc.c
+index 20e5dd7..4dab4fe 100644
+--- a/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/rtw_proc.c
++++ b/drivers/net/wireless/rockchip_wlan/rtl8723ds/os_dep/linux/rtw_proc.c
+@@ -81,8 +81,14 @@ inline struct proc_dir_entry *rtw_proc_create_dir(const char *name, struct proc_
+ 	return entry;
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++#define rtw_proc_ops proc_ops
++#else
++#define rtw_proc_ops file_operations
++#endif
++
+ inline struct proc_dir_entry *rtw_proc_create_entry(const char *name, struct proc_dir_entry *parent,
+-	const struct file_operations *fops, void * data)
++	const struct rtw_proc_ops *fops, void * data)
+ {
+ 	struct proc_dir_entry *entry;
+ 
+@@ -269,6 +275,15 @@ static ssize_t rtw_drv_proc_write(struct file *file, const char __user *buffer,
+ 	return -EROFS;
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_drv_proc_seq_fops = {
++	.proc_open = rtw_drv_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = seq_release,
++	.proc_write = rtw_drv_proc_write,
++};
++#else
+ static const struct file_operations rtw_drv_proc_seq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_drv_proc_open,
+@@ -277,7 +292,17 @@ static const struct file_operations rtw_drv_proc_seq_fops = {
+ 	.release = seq_release,
+ 	.write = rtw_drv_proc_write,
+ };
++#endif
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_drv_proc_sseq_fops = {
++	.proc_open = rtw_drv_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = single_release,
++	.proc_write = rtw_drv_proc_write,
++};
++#else
+ static const struct file_operations rtw_drv_proc_sseq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_drv_proc_open,
+@@ -286,6 +311,7 @@ static const struct file_operations rtw_drv_proc_sseq_fops = {
+ 	.release = single_release,
+ 	.write = rtw_drv_proc_write,
+ };
++#endif
+ 
+ int rtw_drv_proc_init(void)
+ {
+@@ -5097,6 +5123,15 @@ static ssize_t rtw_adapter_proc_write(struct file *file, const char __user *buff
+ 	return -EROFS;
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_adapter_proc_seq_fops = {
++	.proc_open = rtw_adapter_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = seq_release,
++	.proc_write = rtw_adapter_proc_write,
++};
++#else
+ static const struct file_operations rtw_adapter_proc_seq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_adapter_proc_open,
+@@ -5105,7 +5140,17 @@ static const struct file_operations rtw_adapter_proc_seq_fops = {
+ 	.release = seq_release,
+ 	.write = rtw_adapter_proc_write,
+ };
++#endif
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_adapter_proc_sseq_fops = {
++	.proc_open = rtw_adapter_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = single_release,
++	.proc_write = rtw_adapter_proc_write,
++};
++#else
+ static const struct file_operations rtw_adapter_proc_sseq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_adapter_proc_open,
+@@ -5114,6 +5159,7 @@ static const struct file_operations rtw_adapter_proc_sseq_fops = {
+ 	.release = single_release,
+ 	.write = rtw_adapter_proc_write,
+ };
++#endif
+ 
+ int proc_get_odm_adaptivity(struct seq_file *m, void *v)
+ {
+@@ -5270,6 +5316,15 @@ static ssize_t rtw_odm_proc_write(struct file *file, const char __user *buffer,
+ 	return -EROFS;
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_odm_proc_seq_fops = {
++	.proc_open = rtw_odm_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = seq_release,
++	.proc_write = rtw_odm_proc_write,
++};
++#else
+ static const struct file_operations rtw_odm_proc_seq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_odm_proc_open,
+@@ -5278,7 +5333,17 @@ static const struct file_operations rtw_odm_proc_seq_fops = {
+ 	.release = seq_release,
+ 	.write = rtw_odm_proc_write,
+ };
++#endif
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_odm_proc_sseq_fops = {
++	.proc_open = rtw_odm_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = single_release,
++	.proc_write = rtw_odm_proc_write,
++};
++#else
+ static const struct file_operations rtw_odm_proc_sseq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_odm_proc_open,
+@@ -5287,6 +5352,7 @@ static const struct file_operations rtw_odm_proc_sseq_fops = {
+ 	.release = single_release,
+ 	.write = rtw_odm_proc_write,
+ };
++#endif
+ 
+ struct proc_dir_entry *rtw_odm_proc_init(struct net_device *dev)
+ {
+@@ -5419,6 +5485,15 @@ static ssize_t rtw_mcc_proc_write(struct file *file, const char __user *buffer,
+ 	return -EROFS;
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_mcc_proc_seq_fops = {
++	.proc_open = rtw_mcc_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = seq_release,
++	.proc_write = rtw_mcc_proc_write,
++};
++#else
+ static const struct file_operations rtw_mcc_proc_seq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_mcc_proc_open,
+@@ -5427,7 +5502,17 @@ static const struct file_operations rtw_mcc_proc_seq_fops = {
+ 	.release = seq_release,
+ 	.write = rtw_mcc_proc_write,
+ };
++#endif
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
++static const struct proc_ops rtw_mcc_proc_sseq_fops = {
++	.proc_open = rtw_mcc_proc_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = single_release,
++	.proc_write = rtw_mcc_proc_write,
++};
++#else
+ static const struct file_operations rtw_mcc_proc_sseq_fops = {
+ 	.owner = THIS_MODULE,
+ 	.open = rtw_mcc_proc_open,
+@@ -5436,6 +5521,7 @@ static const struct file_operations rtw_mcc_proc_sseq_fops = {
+ 	.release = single_release,
+ 	.write = rtw_mcc_proc_write,
+ };
++#endif
+ 
+ struct proc_dir_entry *rtw_mcc_proc_init(struct net_device *dev)
+ {

@@ -1,0 +1,149 @@
+#!/bin/sh
+#
+# kobra-update - install a ShedNaja update bundle from the running system.
+#
+#   kobra-update [--yes] [--force] [--check] [--mode inplace-b] <bundle.tar>
+#
+# Bundle (tools/make_update_bundle.sh): uncompressed tar with "manifest" and up to three
+# images (boot.img, oem.img, system.img); manifest lines:
+#   format=1
+#   build_id=<id>
+#   image <boot|oem|system> <file> <size> <sha256>
+#
+# Mode "inplace" (the only one so far; "inplace-b" is the old name): we run from one slot
+# (A or B, see /usr/libexec/kobra/current-slot), the other keeps the stock firmware as the
+# fallback. The images are rewritten into boot/oem/system of our slot in place,
+# like OpenWrt's sysupgrade: after verifying the bundle, kobra-update leaves the plan in
+# /dev/.kobra-update-pending and sends SIGQUIT to init. busybox init stops all services
+# (rcK), kills every process, unmounts, and execs /usr/libexec/kobra/update-stage2 as
+# PID 1 (inittab ::restart:), which moves PID 1 into a busybox chroot in RAM and runs
+# update-writer there: nothing reads the squashfs root while our system partition is
+# overwritten.
+# Every partition is read back and compared, then the board reboots. If a write cannot be
+# verified, the A/B metadata is switched to the other slot (stock) first. A power loss during the
+# write leaves an unbootable B (power-cycle until SPL's retry counter falls back to A).
+# A full A/B mode with our system in both slots is planned as a second variant.
+#
+# --check  verify the bundle and print what would be written, write nothing
+# --yes    no confirmation prompt (USB update, scripts)
+# --force  install even while a print is running / paused, or when the print state
+#          cannot be read while Klipper runs
+# One update at a time: a lock on /useremain/shednaja/update/.lock, and nothing new starts
+# while an update is pending (handed over, waiting for the shutdown).
+# Manifest lines are checked strictly (fixed image names <part>.img, numeric size,
+# 64-digit sha256), so nothing from the bundle ends up in the plan for stage 2 unchecked.
+set -eu
+
+MODE=inplace; YES=0; FORCE=0; CHECK=0; BUNDLE=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--yes) YES=1 ;;
+		--force) FORCE=1 ;;
+		--check) CHECK=1 ;;
+		--mode) MODE="$2"; shift ;;
+		--mode=*) MODE="${1#--mode=}" ;;
+		-h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+		-*) echo "unknown option $1" >&2; exit 2 ;;
+		*) BUNDLE="$1" ;;
+	esac
+	shift
+done
+[ -n "$BUNDLE" ] && [ -f "$BUNDLE" ] || { echo "usage: kobra-update [--yes] [--force] [--check] <bundle.tar>" >&2; exit 2; }
+case "$MODE" in inplace|inplace-b) ;; *) echo "mode $MODE is not implemented (only inplace)" >&2; exit 2 ;; esac
+
+UPD=/useremain/shednaja/update
+STAGE=$UPD/stage
+LOG=$UPD/last-update.log
+log() { echo "kobra-update: $*"; echo "$(date '+%F %T') $*" >> "$LOG"; echo "kobra-update: $*" > /dev/kmsg 2>/dev/null || true; }
+die() { log "ERROR: $*"; exit 1; }
+
+mountpoint -q /useremain || die "/useremain not mounted"
+mkdir -p "$UPD"
+exec 9> "$UPD/.lock"
+flock -n 9 || die "another kobra-update is running"
+[ -e /dev/.kobra-update-pending ] && die "an update is already handed over and waits for the reboot"
+S=$(/usr/libexec/kobra/current-slot)
+[ -n "$S" ] || die "cannot tell the running slot from /proc/cmdline"
+
+# ---- unpack and verify ------------------------------------------------------------
+log "bundle $BUNDLE ($(wc -c < "$BUNDLE") B)"
+rm -rf "$STAGE"; mkdir -p "$STAGE"
+tar -xf "$BUNDLE" -C "$STAGE" || die "cannot unpack bundle"
+M=$STAGE/manifest
+[ -f "$M" ] || die "bundle has no manifest"
+grep -qx 'format=1' "$M" || die "unsupported bundle format"
+BID=$(sed -n 's/^build_id=//p' "$M")
+PLAN=""
+SEEN=""
+while read -r kw part file size sum extra; do
+	[ "$kw" = image ] || continue
+	case "$part" in boot|oem|system) ;; *) die "unknown partition in manifest" ;; esac
+	case " $SEEN " in *" $part "*) die "partition $part twice in manifest" ;; esac
+	SEEN="$SEEN $part"
+	[ "$file" = "$part.img" ] || die "$part: image must be named $part.img"
+	case "$size" in ''|*[!0-9]*) die "$part: bad size in manifest" ;; esac
+	[ ${#sum} = 64 ] || die "$part: bad sha256 in manifest"
+	case "$sum" in *[!0-9a-f]*) die "$part: bad sha256 in manifest" ;; esac
+	[ -z "$extra" ] || die "$part: extra fields in manifest"
+	f=$STAGE/$file
+	[ -f "$f" ] || die "missing $file"
+	[ "$(wc -c < "$f")" = "$size" ] || die "$file: size differs from manifest"
+	[ "$(sha256sum "$f" | cut -d' ' -f1)" = "$sum" ] || die "$file: sha256 mismatch"
+	dev=$(readlink -f /dev/block/by-name/${part}_$S)
+	psize=$(( $(cat /sys/class/block/$(basename "$dev")/size) * 512 ))
+	[ "$size" -le "$psize" ] || die "$file ($size B) does not fit ${part}_$S ($psize B)"
+	if [ "$(head -c "$size" "$dev" | sha256sum | cut -d' ' -f1)" = "$sum" ]; then
+		log "  ${part}_$S: already identical, skipped"
+	else
+		log "  ${part}_$S <- $file ($size B, sha256 ${sum%"${sum#????????????}"}...)"
+		PLAN="$PLAN $part:$file:$size:$sum"
+	fi
+done < "$M"
+log "bundle build_id=$BID, running BUILD_ID=$(sed -n 's/^BUILD_ID=//p' /etc/os-release)"
+if [ -z "$PLAN" ]; then
+	log "nothing to write: every partition already matches the bundle"
+	cp "$M" "$UPD/installed.manifest"
+	rm -rf "$STAGE"; exit 0
+fi
+if [ "$CHECK" = 1 ]; then
+	log "check only - nothing written"
+	rm -rf "$STAGE"; exit 0
+fi
+
+# ---- printer must be idle ---------------------------------------------------------
+# Klipper not running (USB update at boot, before S60): nothing can print. Klipper running:
+# the state has to be readable and not printing/paused, unless --force.
+check_idle() {
+	pidof klippy.py > /dev/null 2>&1 || ps | grep -q '[k]lippy.py' || return 0
+	state=$(wget -q -T 5 -O - "http://127.0.0.1:7125/printer/objects/query?print_stats=state" 2>/dev/null |
+		sed -n 's/.*"state": *"\([a-z]*\)".*/\1/p')
+	case "$state" in
+		standby|complete|cancelled|error) return 0 ;;
+		printing|paused) msg="printer is $state - finish or cancel the print first" ;;
+		*) msg="cannot read the print state from Moonraker" ;;
+	esac
+	[ "$FORCE" = 1 ] && { log "WARNING: $msg - continuing (--force)"; return 0; }
+	die "$msg (or --force)"
+}
+check_idle
+
+if [ "$YES" != 1 ]; then
+	printf 'Write the partitions above and reboot? Klipper stops now. [y/N] '
+	read -r a; case "$a" in y|Y|yes) ;; *) log "aborted by user"; exit 1 ;; esac
+	check_idle	# a print may have started while the question was open
+fi
+
+# ---- hand over to init: shutdown, then PID 1 in RAM writes our slot ----------------
+grep -q '^::restart:/usr/libexec/kobra/update-stage2' /etc/inittab || die "this rootfs has no update stage 2"
+{
+	echo "PLAN=$PLAN"
+	echo "SLOT=$S"
+	echo "UDEV=$(readlink -f /dev/block/by-name/useremain)"
+	for part in boot oem system; do echo "DEV_$part=$(readlink -f /dev/block/by-name/${part}_$S)"; done
+} > /dev/.kobra-update-pending
+log "planned:$PLAN"
+log "handing over to init: all services stop now, the printer reboots when the update is written (about 1 min)"
+# milestones of the handover (rcS end, rcK, stage 2, writer) with uptime, see docs/update.md
+echo "$(cut -d' ' -f1 /proc/uptime) kobra-update: handover (SIGQUIT to init)" > "$UPD/trace.log"
+sync
+kill -QUIT 1

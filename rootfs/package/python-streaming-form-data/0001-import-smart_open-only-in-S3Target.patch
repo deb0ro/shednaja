@@ -1,0 +1,23 @@
+Import smart_open only where it is used (S3Target).
+
+Moonraker never uses S3Target; this avoids shipping smart_open + wrapt on the
+ShedNaja rootfs.
+
+--- a/streaming_form_data/targets.py
++++ b/streaming_form_data/targets.py
+@@ -1,6 +1,5 @@
+ import hashlib
+ from pathlib import Path
+-import smart_open  # type: ignore
+ from typing import Callable, List, Optional
+ 
+ 
+@@ -213,6 +212,8 @@
+         self._fd = None
+ 
+     def on_start(self):
++        import smart_open  # type: ignore  # only needed for S3Target
++
+         self._fd = smart_open.open(
+             self._file_path,
+             self._mode,

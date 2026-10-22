@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Create the writable printer_data tree on /useremain on first boot and copy the
+# default configs - only files that do not exist yet, user edits are never touched.
+# Never touches the stock /userdata/app/gk tree.
+
+PD=/useremain/shednaja/printer_data
+DEFAULTS=/usr/share/shednaja/printer_data
+
+if ! mountpoint -q /useremain; then
+	echo "printer-data-init: /useremain not mounted" > /dev/kmsg
+	exit 1
+fi
+mkdir -p $PD/config $PD/logs $PD/gcodes $PD/database $PD/comms /useremain/shednaja/tmp
+chown www-data:www-data /useremain/shednaja/tmp
+# lighttpd drops to www-data before it opens its error log; the logs dir is root-owned
+touch $PD/logs/lighttpd-error.log
+chown www-data:www-data $PD/logs/lighttpd-error.log
+for f in $(cd $DEFAULTS && find . -type f); do
+	if [ ! -e "$PD/$f" ]; then
+		mkdir -p "$(dirname "$PD/$f")"
+		cp "$DEFAULTS/$f" "$PD/$f"
+		echo "printer-data-init: installed default $f" > /dev/kmsg
+	fi
+done
+exit 0

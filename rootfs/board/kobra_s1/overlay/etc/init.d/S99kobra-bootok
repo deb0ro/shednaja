@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# A/B: re-arm the running slot, like stock S99_bootcontrol
+# (/usr/bin/rk_ota --misc=now --mode=retry): tries_remaining of the current
+# (highest-priority) slot back to 7. SPL counts it down on every boot; if 7 boots in a
+# row never get here, SPL falls back to the other slot. Runs last in rcS.
+
+case "$1" in
+	start)
+		kobra-abctl now > /dev/kmsg 2>&1 && echo "kobra-bootok: slot re-armed" > /dev/kmsg
+		# an update handed over during boot (USB update) runs once rcS is done
+		[ -f /dev/.kobra-update-pending ] &&
+			echo "$(cut -d' ' -f1 /proc/uptime) rcS: finished" >> /useremain/shednaja/update/trace.log
+		;;
+	stop)
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"; exit 1 ;;
+esac
+exit 0

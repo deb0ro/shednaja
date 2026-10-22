@@ -1,0 +1,5 @@
+config BR2_PACKAGE_KOBRA_ABCTL
+	bool "kobra-abctl"
+	help
+	  Minimal replacement for Rockchip rk_ota: marks the running A/B
+	  slot (tries_remaining refill) and switches to the other slot.

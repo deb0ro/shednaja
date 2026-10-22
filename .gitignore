@@ -1,0 +1,31 @@
+# --- secrets: never commit ---
+keys/
+swu/**/wpa_supplicant.conf
+*.swu
+
+# --- device backups and extracted vendor binaries (large, proprietary) ---
+dumps/
+analysis/*.bin
+analysis/**/*.bin
+analysis/**/*.img
+
+# --- build output (reproducible from tools/ and the docs) ---
+build/
+
+# --- logs and scratch ---
+logs/
+logs_run_stdout*.txt
+swd_ur_run.log
+*.log
+
+# --- third-party material we are not allowed to redistribute ---
+reference/datasheets/
+reference/web_*
+
+# --- python / tooling ---
+.venv/
+__pycache__/
+*.pyc
+
+# disassembly listings of the proprietary MCU firmware (regenerate with analysis/re_cs1237/dis.sh)
+analysis/**/*.dis

@@ -1,0 +1,6 @@
+# from pypi.org (pinned)
+sha256  e5da495f2064889f8e68b67f9358b0d102e03b783c2d42e5b8e132ab859a5d8a  inotify_simple-2.0.1-py3-none-any.whl
+sha256  a8546b221afe8b72b6a9f298cd92a4c1f90570d7b5baa295acb1913644e230a5  libnacl-2.1.0-py3-none-any.whl
+sha256  2d21d1cc5a017bd0559e36150c21c830ab1dc304dedd1b7ea85d20f45ef3edd7  importlib_metadata-9.0.0-py3-none-any.whl
+sha256  071652d6115ed432f5ce1d34c336c0adfd6a884660d1e9712a256d3d3bd4b14e  zipp-3.23.0-py3-none-any.whl
+sha256  34dc67d7d21a12399828dd13e63b352750580beea54ea7c729e708f2d2905fef  dbus_fast-5.0.22.tar.gz

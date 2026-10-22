@@ -1,0 +1,169 @@
+# Updating ShedNaja
+
+ShedNaja updates itself from the running system: no stock firmware, no Rinkhals, no SSH
+into the stock firmware. Until then every write went through `tools/flash_slot.sh`, which
+needs stock with Rinkhals for SSH.
+
+## Slot layout and the two variants
+
+| Variant | Slot A | Slot B | Update writes | If the update breaks |
+|---|---|---|---|---|
+| **inplace** (current) | stock or ShedNaja | the other one | our slot in place | SPL falls back to stock |
+| **ab** (planned) | ShedNaja | ShedNaja | the inactive slot | the previous ShedNaja version |
+
+`inplace` (formerly `inplace-b`) works in either slot: the installer puts ShedNaja into the
+slot stock is not running from, which is B on a factory printer but A once an official
+Anycubic update has moved stock to B. `/usr/libexec/kobra/current-slot` tells the scripts
+which slot they run from (U-Boot sets `root=` to `system_a` = p8 or `system_b` = p9).
+ShedNaja in slot A is not tested on a printer yet (stock is in A here).
+
+The plan is to offer both variants, so everyone can decide. `inplace` keeps the stock
+firmware on the eMMC as the safety net. `ab` gives a real rollback to the previous ShedNaja
+version, but stock is gone from the eMMC and has to come back from a backup / stock .swu.
+`ab` comes once the printer is fully verified on ShedNaja (`kobra-update --mode ab` is
+reserved and refuses for now).
+
+## Update bundle
+
+`tools/make_update_bundle.sh` packs the build outputs into
+`build/update/shednaja-update-<build_id>.tar`: an uncompressed tar with
+
+```
+manifest       format=1, build_id=..., created=..., one line per image:
+               image <boot|oem|system> <file> <size> <sha256>
+boot.img       build/kernel/boot.img        -> boot_<slot>   (16 MiB)
+oem.img        build/kernel/oem_ours.img    -> oem_<slot>    (64 MiB)
+system.img     build/rootfs/rootfs.squashfs -> system_<slot> (48 MiB)
+```
+
+`--boot/--oem/--system FILE` pack only some images. Partitions that already hold exactly the
+bundle's image are skipped on the printer, so a full bundle is fine even when only the
+rootfs changed.
+
+## Installing
+
+**Over SSH:**
+```
+scp -O shednaja-update-<id>.tar root@<printer>:/useremain/shednaja/update/
+ssh root@<printer> kobra-update /useremain/shednaja/update/shednaja-update-<id>.tar
+```
+(`scp -O`: our dropbear has no sftp-server; or `ssh ... 'cat > file' < file`.)
+`kobra-update --check <bundle>` only verifies and lists what it would write.
+
+**From a USB stick:** copy the bundle (name must start with `shednaja-update`, `.tar`)
+into the root folder of a FAT32 or exFAT stick (MBR or GPT; GPT needs a kernel from ae32afc on),
+plug it into the printer, power-cycle.
+`S27kobra-usbupdate` installs it at boot before Klipper starts and reboots. A bundle whose
+manifest equals the last installed one is skipped, so the stick can stay in. With several
+bundles the last one by name is used.
+
+**First install from the stock firmware (USB installer):**
+`bash tools/make_install_swu.sh [bundle.tar]` wraps a bundle into
+`build/install/aGVscF9zb3Nf/update.swu` (the stock USB update format, see
+docs/test-board-access.md). Copy the `aGVscF9zb3Nf` folder to the root of a FAT32 stick and
+plug it into the printer running stock. The stock `channel.sh` unpacks it to
+`/useremain/update_swu` and runs `swu/shednaja_install/update.sh`, which requires a complete
+bundle (boot, oem and system, so a first install never leaves a mix of stock and ShedNaja;
+`tools/make_install_swu.sh` refuses partial bundles too), checks the images
+(md5, stock busybox has no sha256sum), writes the ones that differ into boot/oem/system of
+the slot stock is not running from (`root=` p8 → slot B, p9 → slot A) with readback,
+writes `installed.manifest`, switches to that slot with `rk_ota --misc=other --mode=retry`
+and reboots. The stock slot and /userdata are not written; on any
+error it beeps 5 times and stays on stock. Log: `shednaja-install.log` on the stick.
+Since unchanged images are not rewritten, the same stick also brings a printer back to
+ShedNaja after `REBOOT_TO_STOCK`.
+
+## What kobra-update does (mode inplace)
+
+1. Takes the lock `/useremain/shednaja/update/.lock` (one kobra-update at a time) and
+   refuses while an earlier update is handed over and waits for its reboot. Finds the
+   running slot (`current-slot`); all writes go to that slot's partitions.
+2. Unpacks the bundle to `/useremain/shednaja/update/stage`, checks format, sizes, sha256 of
+   every image and that it fits its partition; skips images identical to the partition.
+   Manifest lines are strict: images must be named `<part>.img`, sizes numeric, sha256 64
+   hex digits, each partition once.
+3. Printer must be idle: with Klipper not running (USB update at boot) nothing can print;
+   with Klipper running the Moonraker print state must be readable and not `printing` /
+   `paused` (unless `--force`). Asks for confirmation unless `--yes`, and checks the state
+   again after the answer.
+4. Writes the plan (images, slot, target devices, useremain device) to
+   `/dev/.kobra-update-pending` (devtmpfs, RAM) and sends `SIGQUIT` to init. Stage 2 and the
+   writer read that file as data (allowed keys and characters only), not as a shell script.
+5. busybox init runs its `::shutdown` actions (`rcK` stops every service, `umount-all`),
+   kills all processes and execs `/usr/libexec/kobra/update-stage2` as PID 1 (inittab
+   `::restart:`). During boot (USB update) init holds the signal until `rcS` has finished,
+   so the services start once and are stopped again. `umount-all` replaces busybox
+   `umount -a -r` because that also unmounts `/dev` when nothing holds it open: init then
+   cannot open `/dev/console` for stage 2 and halts (the board resets), and the pending
+   file is gone. Over SSH the open session kept `/dev` busy, so this only showed at boot.
+6. `update-stage2` remounts `/useremain` rw, builds a 1.3 MB busybox + uClibc + kobra-abctl
+   chroot on a tmpfs and `exec chroot`s into it: from now on PID 1 runs from RAM and nothing
+   reads the squashfs root.
+7. `update-writer` (PID 1 in the chroot) writes each partition with `dd conv=fsync`, drops
+   the page cache and compares the sha256 read back from the eMMC (one retry). All OK: saves
+   the manifest as `installed.manifest`. Any failure: switches the A/B metadata to the
+   other slot (stock) with `kobra-abctl other`. Then `reboot -f`. PID 1 never exits on an error path.
+
+Log: `/useremain/shednaja/update/last-update.log` (also on the console and in `dmesg`).
+`trace.log` next to it records the handover milestones with uptime (handover, `rcS`
+finished, `rcK` reached S27, stage 2 steps, writer start and each partition) and
+`stage2-dmesg.log` the kernel log at stage 2, for when an update stops without a message.
+A USB bundle is tried once (`usb-tried.manifest`): if it fails, the next boot skips it.
+The display shows "Updating firmware" from step 6 and "Update complete" / "Update failed" for
+3 s before the reboot: pre-rendered frames in `/usr/share/shednaja/splash/*.fb.gz`
+(`tools/make_update_splash.py`: 800x480 BGRX, rotated 180° like the panel), written with
+`zcat > /dev/fb0`. Stage 2 first unblanks and pans fb0 (sysfs `blank`, `pan`), as
+HelixScreen's fbdev backend does: during a USB update at boot HelixScreen is stopped before
+it took over the display, and until then the Rockchip DRM driver scans out the U-Boot logo
+(`Freeing drm_logo memory` in dmesg marks the takeover), so plain writes to fb0 stay
+invisible.
+SSH drops at step 5; the printer is back after about 1.5 min.
+
+**Why PID 1 has to leave the squashfs:** the first version only ran the writer in a chroot
+and left init, dropbear and wpa_supplicant running from the old root. The write and the
+readback were correct, but those processes then faulted on pages of the overwritten
+system_b, init died, and the board hung until it was power-cycled.
+
+**A kernel panic does not reboot this board** (seen in that test, `panic=5` is set): it
+hangs until power-cycled. So a broken slot B does not fall back to stock A on its own; each
+power cycle uses one of SPL's 7 tries, then A boots. A power loss while writing therefore
+means: power-cycle up to 7 times, then stock A comes up and `tools/flash_slot.sh` can write
+slot B again.
+
+## Back to stock
+
+The other slot still holds the stock firmware: `kobra-abctl other` + reboot boots it (until the next
+switch back with `kobra-abctl other` or `rk_ota --misc=other` on stock).
+
+The `REBOOT_TO_STOCK` macro (kobra_peripherals.cfg: `[kobra_slot]` provides the hidden
+`_REBOOT_TO_STOCK` command, the macro wraps it so Mainsail and HelixScreen list it) does the
+same after a confirmation dialog; it is refused while a print is running or paused. Before
+the reboot it resets the MCUs like `FIRMWARE_RESTART`: after a plain warm reboot stock
+stopped with error 11407 (printhead board did not start) until the printer was
+power-cycled, because the MCUs were still running in the state Klipper left them in.
+`printer.kobra_slot.slot` reports the running slot. `printer-data-init` only installs
+missing config files, so a printer set up before this needs `[kobra_slot]` and the macro
+added by hand.
+
+## Test log
+
+- 2026-10-21, first version (writer in a chroot, init still on the squashfs): bundle
+  `6dc2a04`, system_b written and verified in 8 s, then the board hung instead of rebooting
+  (power-cycled by the user; it booted the new build fine).
+- 2026-10-21, PID 1 handover: from `710878c` to bundle `30b7bc3` over SSH
+  (`scp -O` + `kobra-update --yes`): boot_b/oem_b identical and skipped, system_b written and
+  verified, **rebooted by itself**; back on SSH 2 min 7 s after the handover, Klipper ready,
+  `BUILD_ID=30b7bc3`.
+- 2026-10-21, `97a9600` (first build with the update screens) installed over SSH from `32aee64`:
+  OK, rebooted by itself. The screens show from the next update on (stage 2 runs from the
+  installed system).
+- 2026-10-21, USB update at boot: first tries (`e0cb58c` from a stick) looped (handover,
+  then reset, then the same bundle again) because `umount -a -r` unmounted `/dev` (see step 5).
+  With `umount-all` (`4ed6e35`) and unblank + pan (`b3ce31d`): `e0cb58c` installed from the
+  stick, update screen visible, about 5 min from power-on.
+- 2026-10-21, GPT stick (`ae32afc`): before, the kernel saw only the protective partition;
+  now `sda1` mounts as vfat.
+- 2026-10-21, `REBOOT_TO_STOCK` (`d4d3f01`): slot A, MCUs reset, reboots by itself; stock
+  starts without error 11407 (it showed after a plain warm reboot). Back with the stock
+  installer (`update.swu` from `ae32afc`): slot B already identical, only the slot switch,
+  3 long beeps, ShedNaja boots.

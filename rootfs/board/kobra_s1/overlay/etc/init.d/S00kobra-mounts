@@ -1,0 +1,101 @@
+#!/bin/sh
+#
+# Partition links and mounts, same layout as stock (S20linkmount):
+#   /dev/block/by-name/<name>, oem_<slot> -> /oem (ro), userdata -> /userdata,
+#   useremain -> /useremain. /data -> /userdata (symlink in the rootfs).
+# Unlike stock this NEVER formats anything: a failing mount is logged and retried
+# read-only, the partition is left alone.
+
+LOG=/dev/kmsg
+log() { echo "kobra-mounts: $*" > $LOG; echo "kobra-mounts: $*"; }
+
+linkdev() {
+	mkdir -p /dev/block/by-name
+	for u in /sys/class/block/mmcblk0p*/uevent; do
+		[ -f "$u" ] || continue
+		name=$(sed -n 's/^PARTNAME=//p' "$u")
+		dev=$(sed -n 's/^DEVNAME=//p' "$u")
+		[ -n "$name" ] && ln -sf "/dev/$dev" "/dev/block/by-name/$name"
+	done
+	# fallback: the fixed stock layout (blkdevparts from U-Boot)
+	[ -e /dev/block/by-name/userdata ] && return
+	i=1
+	for n in env idblock uboot_a uboot_b misc boot_a boot_b system_a system_b \
+		 oem_a oem_b userdata ac_lib_a ac_lib_b ac_app_a ac_app_b useremain; do
+		ln -sf /dev/mmcblk0p$i /dev/block/by-name/$n
+		i=$((i + 1))
+	done
+}
+
+slot() { /usr/libexec/kobra/current-slot; }
+
+# /etc/shadow -> /run/shadow -> /userdata/shednaja/shadow: the owner's passwords (passwd).
+# Seeded from the image default (stock root password); users a newer image adds are
+# appended. Deleting the file restores the default on the next boot.
+shadow() {
+	def=/usr/share/shednaja/shadow.default
+	p=/userdata/shednaja/shadow
+	if [ "$1" = persistent ]; then
+		if [ ! -s "$p" ]; then
+			cp "$def" "$p.new" && chmod 600 "$p.new" && mv "$p.new" "$p" && log "shadow: default installed"
+		else
+			awk -F: 'NR == FNR { have[$1] = 1; next } !($1 in have)' "$p" "$def" > /run/shadow.add
+			[ -s /run/shadow.add ] && cat /run/shadow.add >> "$p" && log "shadow: added $(cut -d: -f1 /run/shadow.add | tr '\n' ' ')"
+			rm -f /run/shadow.add
+		fi
+		[ -s "$p" ] && { ln -sfn "$p" /run/shadow; return; }
+	fi
+	log "shadow: default password only in RAM this boot"
+	cp "$def" /run/shadow && chmod 600 /run/shadow
+}
+
+mount_ext4() {	# <partname> <mountpoint>
+	dev=/dev/block/by-name/$1
+	[ -e "$dev" ] || { log "$1: no device"; return 1; }
+	mountpoint -q "$2" && return 0
+	e2fsck -p "$dev" > /dev/null 2>&1
+	rc=$?
+	[ $rc -ge 4 ] && log "$1: e2fsck -p exit $rc (needs manual check, not repairing)"
+	if mount -t ext4 -o noatime "$dev" "$2"; then
+		log "$1 mounted on $2"
+	elif mount -t ext4 -o ro "$dev" "$2"; then
+		log "$1 mounted READ-ONLY on $2 (rw mount failed)"
+	else
+		log "$1: mount failed - left untouched"
+		return 1
+	fi
+}
+
+start() {
+	# /etc/passwd -> /run/passwd: writable for passwd, which rewrites it after the shadow
+	# entry; the content always comes from the image
+	cp /usr/share/shednaja/passwd /run/passwd && chmod 644 /run/passwd
+	linkdev
+	s=$(slot)
+	if [ -n "$s" ]; then
+		mount -t squashfs -o ro /dev/block/by-name/oem_$s /oem && log "oem_$s mounted on /oem"
+	else
+		log "unknown root= in cmdline, not mounting oem"
+	fi
+	mount_ext4 userdata /userdata
+	mount_ext4 useremain /useremain
+	# our persistent state (dropbear host keys, random seed, logs).
+	# /etc/dropbear -> /run/dropbear-keys -> /userdata/shednaja/dropbear, or a tmpfs dir
+	# if userdata is not available, so SSH still comes up (with fresh host keys).
+	if mountpoint -q /userdata && mkdir -p /userdata/shednaja/dropbear /userdata/shednaja/seedrng /userdata/shednaja/log /userdata/shednaja/ssh; then
+		chmod 700 /userdata/shednaja/dropbear /userdata/shednaja/ssh
+		ln -sfn /userdata/shednaja/dropbear /run/dropbear-keys
+		shadow persistent
+	else
+		log "no writable /userdata - SSH host keys only in RAM this boot"
+		mkdir -p -m 700 /run/dropbear-keys
+		shadow
+	fi
+}
+
+case "$1" in
+	start) start ;;
+	stop) ;;
+	*) echo "Usage: $0 {start|stop}"; exit 1 ;;
+esac
+exit 0

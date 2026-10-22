@@ -1,0 +1,13 @@
+config BR2_PACKAGE_MOONRAKER
+	bool "moonraker"
+	depends on BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_PYTHON_TORNADO
+	select BR2_PACKAGE_PYTHON_SERIAL
+	select BR2_PACKAGE_PYTHON_PILLOW
+	select BR2_PACKAGE_PYTHON_DISTRO
+	select BR2_PACKAGE_PYTHON_JINJA2
+	select BR2_PACKAGE_PYTHON_STREAMING_FORM_DATA
+	select BR2_PACKAGE_KOBRA_PYWHEELS
+	select BR2_PACKAGE_PYTHON3_SQLITE
+	help
+	  Moonraker API server, installed read-only in /usr/lib/moonraker.

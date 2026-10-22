@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Wi-Fi driver: cfg80211 + RTL8723DS (our builds from build/kernel, in
+# /lib/modules/$(uname -r)). Stock loads the same two from /oem/usr/ko.
+
+case "$1" in
+	start)
+		modprobe cfg80211
+		modprobe RTL8723DS || echo "kobra-modules: RTL8723DS failed" > /dev/kmsg
+		;;
+	stop)
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"; exit 1 ;;
+esac
+exit 0

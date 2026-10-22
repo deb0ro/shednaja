@@ -1,0 +1,11 @@
+config BR2_PACKAGE_KOBRA_ACEPRO
+	bool "kobra-acepro"
+	depends on BR2_PACKAGE_KLIPPER
+	help
+	  Klipper driver for the Anycubic ACE Pro multi-colour unit
+	  (Kobra-S1/ACEPRO, the one the vanilla-klipper Rinkhals app ships):
+	  klippy extras ace/, temperature_ace, virtual_pins, plus its
+	  ace_KS1.cfg / ace_macros_generic.cfg as printer_data defaults.
+	  The ACE talks over USB CDC-ACM (/dev/ttyACM*, found by USB id).
+	  Not active: nothing includes ace_KS1.cfg, and its macros expect the
+	  vanilla-klipper macro set (see docs/peripherals.md, "ACE Pro").

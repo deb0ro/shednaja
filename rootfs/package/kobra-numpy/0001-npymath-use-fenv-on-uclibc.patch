@@ -1,0 +1,18 @@
+npymath: use the generic <fenv.h> code on uClibc
+
+numpy treats __UCLIBC__ like MSVC/Alpha: it sets FP flags with volatile
+arithmetic but only defines npy_get/clear_floatstatus_barrier() for those two,
+so on uClibc/ARM _multiarray_umath has undefined symbols and import fails.
+kobra-numpy provides a fenv.h for ARM hard-float, so take the generic branch.
+
+--- a/numpy/core/src/npymath/ieee754.c.src
++++ b/numpy/core/src/npymath/ieee754.c.src
+@@ -682,7 +682,7 @@
+ }
+ 
+ #elif defined(_MSC_VER) || (defined(__osf__) && defined(__alpha)) || \
+-      defined (__UCLIBC__) || (defined(__arc__) && defined(__GLIBC__))
++      (defined(__arc__) && defined(__GLIBC__))
+ 
+ /*
+  * By using a volatile floating point value,

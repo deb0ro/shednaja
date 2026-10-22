@@ -1,0 +1,85 @@
+# Kobra S1 host (RV1106G3) - minimal rootfs for the system_a/system_b slot.
+# Buildroot 2023.02.6 from the Luckfox Pico SDK, external toolchain = the SDK's
+# arm-rockchip830-linux-uclibcgnueabihf (gcc 8.3.0, uClibc-ng), same as the kernel.
+# KOBRA_TOOLCHAIN / KOBRA_* are exported by tools/build_rootfs.sh.
+
+# ---- target / toolchain (as the SDK's luckfox_pico_defconfig) ----
+BR2_arm=y
+BR2_cortex_a7=y
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+BR2_TOOLCHAIN_EXTERNAL_PATH="$(KOBRA_TOOLCHAIN)"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-rockchip830-linux-uclibcgnueabihf"
+BR2_TOOLCHAIN_EXTERNAL_GCC_8=y
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_5_10=y
+BR2_TOOLCHAIN_EXTERNAL_WCHAR=y
+BR2_TOOLCHAIN_EXTERNAL_HAS_SSP=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
+BR2_DL_DIR="$(KOBRA_DL_DIR)"
+BR2_PRIMARY_SITE="http://sources.buildroot.net"
+BR2_OPTIMIZE_S=y
+BR2_REPRODUCIBLE=y
+
+# ---- system ----
+BR2_TARGET_GENERIC_HOSTNAME="kobra-s1"
+BR2_TARGET_GENERIC_ISSUE="shednaja"
+BR2_INIT_BUSYBOX=y
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_MDEV=y
+# read-only rootfs (squashfs); writable state lives on /userdata and /useremain
+# BR2_TARGET_GENERIC_REMOUNT_ROOTFS_RW is not set
+BR2_TARGET_GENERIC_GETTY_PORT="ttyFIQ0"
+BR2_TARGET_GENERIC_GETTY_BAUDRATE_115200=y
+BR2_SYSTEM_DHCP=""
+BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_KOBRA_PATH)/board/kobra_s1/overlay"
+BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_KOBRA_PATH)/board/kobra_s1/post-build.sh"
+BR2_ROOTFS_POST_FAKEROOT_SCRIPT="$(BR2_EXTERNAL_KOBRA_PATH)/board/kobra_s1/post-fakeroot.sh"
+
+# ---- packages ----
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_KOBRA_PATH)/board/kobra_s1/busybox.fragment"
+BR2_PACKAGE_DROPBEAR=y
+# BR2_PACKAGE_DROPBEAR_CLIENT is not set
+BR2_PACKAGE_WPA_SUPPLICANT=y
+BR2_PACKAGE_WPA_SUPPLICANT_NL80211=y
+BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
+BR2_PACKAGE_WPA_SUPPLICANT_PASSPHRASE=y
+BR2_PACKAGE_E2FSPROGS=y
+# BR2_PACKAGE_E2FSPROGS_FSCK is not set
+BR2_PACKAGE_PYTHON3=y
+# python modules Klipper/Moonraker (step 2) need: zlib (klippy msgproto), sqlite3
+# (moonraker db), ssl (pip/https), lzma
+BR2_PACKAGE_PYTHON3_ZLIB=y
+BR2_PACKAGE_PYTHON3_SQLITE=y
+BR2_PACKAGE_PYTHON3_SSL=y
+BR2_PACKAGE_PYTHON3_XZ=y
+BR2_PACKAGE_KOBRA_ABCTL=y
+BR2_PACKAGE_RTK_HCIATTACH=y
+# cfg80211 regulatory database (kernel loads /lib/firmware/regulatory.db)
+BR2_PACKAGE_WIRELESS_REGDB=y
+
+# ---- step 2: Klipper + Moonraker + Mainsail ----
+BR2_PACKAGE_KLIPPER=y
+BR2_PACKAGE_MOONRAKER=y
+BR2_PACKAGE_MAINSAIL=y
+BR2_PACKAGE_MAINSAIL_CONFIG=y
+BR2_PACKAGE_LIGHTTPD=y
+# mod_rewrite (SPA fallback to index.html) needs PCRE
+BR2_PACKAGE_LIGHTTPD_PCRE=y
+# numpy for SHAPER_CALIBRATE / TEST_RESONANCES on the printer (uClibc build with our fenv.h,
+# tests removed in post-build)
+BR2_PACKAGE_KOBRA_NUMPY=y
+
+# ---- touch display UI ----
+BR2_PACKAGE_HELIXSCREEN=y
+
+# ---- step 4: camera + host-board peripherals + ACE Pro driver ----
+# mjpg-streamer for the UVC camera (/webcam/), klipper_mcu for the light/buzzer pins,
+# ACE Pro klippy driver (inactive until [include ace_KS1.cfg])
+BR2_PACKAGE_KOBRA_WEBCAM=y
+BR2_PACKAGE_KLIPPER_HOST_MCU=y
+BR2_PACKAGE_KOBRA_ACEPRO=y
+
+# ---- image ----
+BR2_TARGET_ROOTFS_SQUASHFS=y
+BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
+BR2_TARGET_ROOTFS_SQUASHFS_BS_128K=y
+# BR2_TARGET_ROOTFS_TAR is not set

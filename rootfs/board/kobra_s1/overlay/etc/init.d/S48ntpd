@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# Time sync: no RTC battery on the board, the clock starts at 1970. The helper waits
+# for DNS (Wi-Fi comes up in the background), sets the clock with one ntpd -q, then
+# keeps busybox ntpd running.
+
+case "$1" in
+	start)
+		start-stop-daemon -S -q -b -m -p /run/ntpd.pid -x /usr/libexec/kobra/ntp-start
+		;;
+	stop)
+		start-stop-daemon -K -q -p /run/ntpd.pid
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"; exit 1 ;;
+esac
+exit 0

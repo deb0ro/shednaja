@@ -1,0 +1,10 @@
+config BR2_PACKAGE_HELIXSCREEN
+	bool "helixscreen"
+	depends on BR2_arm
+	help
+	  HelixScreen touch UI for Klipper (LVGL 9, fbdev + evdev) in
+	  /opt/helixscreen. Prebuilt static armv7 release binary (the
+	  "ad5m" build: Cortex-A7, 800x480), printer images of other
+	  printers removed. Started by S70helixscreen after Moonraker.
+
+	  https://github.com/prestonbrown/helixscreen

@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Printer camera: mjpg-streamer on 127.0.0.1:8080, served by lighttpd as /webcam/
+# (/webcam/?action=stream, /webcam/?action=snapshot). Settings in
+# printer_data/config/webcam.conf (shell syntax, editable in Mainsail).
+# The camera sits behind the GL850G hub, which S25kobra-usb switches on; it takes
+# a second or two to enumerate, so wait for the device node.
+
+CONF=/useremain/shednaja/printer_data/config/webcam.conf
+PIDFILE=/run/webcam.pid
+PLUGINS=/usr/lib/mjpg-streamer
+
+WEBCAM_ENABLE=1
+WEBCAM_DEVICE=/dev/video0
+WEBCAM_RESOLUTION=1280x720
+WEBCAM_FPS=15
+WEBCAM_OPTIONS=""
+[ -f $CONF ] && . $CONF
+
+start() {
+	[ "$WEBCAM_ENABLE" = 1 ] || return 0
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		[ -c "$WEBCAM_DEVICE" ] && break
+		sleep 1
+	done
+	if [ ! -c "$WEBCAM_DEVICE" ]; then
+		echo "webcam: $WEBCAM_DEVICE not found" > /dev/kmsg
+		return 0
+	fi
+	start-stop-daemon -S -q -b -m -p $PIDFILE -x /usr/bin/mjpg_streamer -- \
+		-i "$PLUGINS/input_uvc.so -d $WEBCAM_DEVICE -r $WEBCAM_RESOLUTION -f $WEBCAM_FPS $WEBCAM_OPTIONS" \
+		-o "$PLUGINS/output_http.so -l 127.0.0.1 -p 8080"
+}
+
+stop() {
+	start-stop-daemon -K -q -p $PIDFILE
+	rm -f $PIDFILE
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; sleep 1; start ;;
+	*) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0
