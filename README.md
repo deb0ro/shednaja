@@ -20,18 +20,18 @@ stock stays in one, ShedNaja goes into the other, and you can switch between the
 | Probe | Load-cell (CS1237) nozzle probe: Z homing, `BED_MESH_CALIBRATE`, `PROBE_ACCURACY` |
 | Input shaper | `SHAPER_CALIBRATE` with the LIS2DW12 accelerometer in the toolhead |
 | Heaters, fans | Nozzle, bed, part / auxiliary / exhaust fans, controller fan |
-| Sensors | Toolhead filament runout sensor: pauses on runout, detects insertion (a full runout-and-resume during a print is not tested yet) |
+| Sensors | Toolhead filament runout sensor: pauses the print on runout, loads new filament on insertion, then `RESUME` |
 | Display | HelixScreen on the 800×480 touch screen |
 | Web | Mainsail + Moonraker on port 80, camera stream (MJPEG, 640×480, 15 fps) |
 | Extras | Chamber light, buzzer (`M300`), Wi-Fi (uses your stock Wi-Fi settings). The Bluetooth controller comes up, but nothing uses it yet (no pairing tools) |
 | Updates | Over SSH or from a USB stick, with a progress screen; reads back what it wrote |
+| Power-loss recovery | `RESUME_INTERRUPTED` continues a print after a power cut from the layer it stopped in; Z is re-measured with the probe next to the print (needs the layer info the ShedNaja OrcaSlicer profile writes) |
 | Back to stock | `REBOOT_TO_STOCK` macro (Mainsail / HelixScreen), one tap |
 
 ## What does not work (yet)
 
 - **ACE Pro** (multi-colour unit): not supported yet. The ACEPRO driver is in the image for
   later integration, inactive ([docs/peripherals.md](docs/peripherals.md#ace-pro)).
-- **Power-loss recovery**: not implemented.
 - Anycubic cloud, Anycubic app and the Anycubic slicer's printer integration: not supported,
   and not planned. Use Mainsail / Moonraker (OrcaSlicer, Klipper-compatible slicers).
 - Tested with stock firmware **2.7.2.7** and the Anycubic MCU firmware **v1.4.3** that

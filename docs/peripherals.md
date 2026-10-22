@@ -12,7 +12,7 @@ ShedNaja drives it. The investigation and measurements behind this page:
 | Chamber light | `LIGHT_ON` / `LIGHT_OFF` / `LIGHT_TOGGLE` | works |
 | Buzzer | `M300 [P<ms>]` (fixed tone) | works |
 | Fans | part, hotend, controller, box (`M106 P2`), air filter (`M106 P3`) | works |
-| Toolhead filament sensor (analog) | `[adc_filament_switch filament_runout_nozzle]`, pauses on runout, insert detection | sensor works; a full runout-and-resume during a print is **not tested yet** |
+| Toolhead filament sensor (analog) | `[adc_filament_switch filament_runout_nozzle]`: pause on runout, load on insert, then `RESUME` | works (runout during a print tested 2026-10-22) |
 | ACE return module (RDM) switch | `[filament_switch_sensor filament_runout_rdm]` | configured, not tested (no ACE) |
 | Accelerometer LIS2DW12 | `SHAPER_CALIBRATE` on the printer | works |
 | Load cell CS1237 | Z probe (`probe_ks1`) | works |
@@ -20,7 +20,7 @@ ShedNaja drives it. The investigation and measurements behind this page:
 | Wi-Fi | stock Wi-Fi settings, power saving off | works |
 | Bluetooth | `hci0` comes up; no bluez tools, nothing uses it | controller only |
 | USB stick | kernel support (FAT, exFAT, MBR/GPT) for USB updates; no automount for printing | partial |
-| Power-loss recovery | — | not implemented |
+| Power-loss recovery | `[kobra_plr]`: state saved at every layer change, `RESUME_INTERRUPTED` after a power cut | works (tested 2026-10-22) |
 
 ## Inventory
 
@@ -43,11 +43,46 @@ ShedNaja drives it. The investigation and measurements behind this page:
 | Load cell CS1237 | nozzle MCU PA5/PA6/PA7 | `[cs1237]` | same, `probe_ks1` |
 | ACE Pro | USB CDC-ACM on the hub (`/dev/ttyACM*`) | GoKlipper `[filament_hub]` | see "ACE Pro" |
 | Display + touch | VOP + I2C3 | K3SysUi | HelixScreen ([display-ui.md](display-ui.md)) |
-| Power-loss detection | no input found | software only (position records) | — |
+| Power-loss detection | no input found | software only (position records) | state saved ahead of time per layer (`kobra_plr`) |
 | Door sensor | none | — | — |
 
 Host GPIO numbers are sysfs numbers: bank × 32 + line (gpio117 = `gpiochip3` line 21).
 The host pins reach Klipper through the Klipper Linux MCU (`[mcu host]`, `S59klipper-mcu`).
+
+## Filament runout during a print
+
+Tested 2026-10-22 with a PETG print: filament cut above the toolhead. The sensor went from
+2.66 V to 2.86 V ("absent"), Klipper paused the print within the 0.5 s debounce and parked
+the toolhead (`_RUNOUT`, mainsail.cfg PAUSE), the nozzle stayed at print temperature. New
+filament pushed in read "present" at 2.66 V about 30 s later, `_INSERT` loaded it, and
+`RESUME` continued the print from the same file position and it went on printing (the
+print was then ended by a deliberate power cut, which led to the power-loss recovery below).
+
+## Power-loss recovery
+
+The printer has no power-fail input, so `kobra_plr` (klippy/extras/kobra_plr.py, `[kobra_plr]`
+and the `RESUME_INTERRUPTED` / `CLEAR_INTERRUPTED` macros in `kobra_macros.cfg`) saves the
+print state ahead of time: at every layer change (`SET_PRINT_STATS_INFO CURRENT_LAYER=`,
+written by the ShedNaja OrcaSlicer profile) it writes the file and the position of the next
+line, the G-code position and modes, temperatures, fans, pressure advance, the bed mesh and
+the object list to `printer_data/power_loss_recovery.json` (temp file, fsync, rename). A
+completed or cancelled print removes it.
+
+After a power cut the display shows "Interrupted print" and Mainsail a dialog (Resume /
+Later / Discard). `RESUME_INTERRUPTED`:
+1. heats the bed, takes the saved Z, lowers the bed 5 mm, homes X and Y above the print;
+2. purges into the bin (`PURGE=`, default 15 mm) and wipes the nozzle while it cools to
+   140 °C;
+3. probes the bed 40 mm next to the print and corrects Z by the difference to the saved mesh
+   (`PROBE=0` skips this; a correction over 3 mm stops the resume). Without it a cut during a
+   layer leaves Z off by the mesh compensation or a z-hop;
+4. heats to print temperature over the wiper, restores the state and continues the file
+   from the start of the interrupted layer.
+
+Tested 2026-10-22: a PETG cube cut off at layer 15; Z corrected by +0.24 mm, the resumed
+layer joined the print cleanly. Limits: the print must still stick to the cooled bed; a
+print that covers almost the whole bed leaves no spot to probe (the saved Z is used); the
+layer info comes only from slicers that call `SET_PRINT_STATS_INFO CURRENT_LAYER`.
 
 ## Camera
 
@@ -85,5 +120,4 @@ config).
 
 - Stock camera features: H.264 cloud stream, NPU spaghetti detection, timelapse.
 - USB stick automount for printing from a stick.
-- Power-loss resume (software only; no detection input).
 - ACE Pro integration.
