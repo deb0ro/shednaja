@@ -6,12 +6,15 @@
 #   bash tools/export_public.sh [dir] [message]      (default dir: build/publish/shednaja)
 #
 # Not published: reverse-engineering material of the Anycubic MCU firmware (and the
-# Klipper patch derived from it) and a board picture of unknown origin.
+# Klipper patch derived from it), a board picture of unknown origin, and the OrcaSlicer bundle.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 DIR=${1:-build/publish/shednaja}
 MSG=${2:-}
-EXCLUDE=(analysis/re_cs1237 patches reference/boards_overview.webp docs/history/cs1237-calibration-re.md)
+# The OrcaSlicer bundle is MPC561's filament/process presets (no licence): published only
+# once MPC561 agrees (slicer/orcaslicer/README.md).
+EXCLUDE=(analysis/re_cs1237 patches reference/boards_overview.webp docs/history/cs1237-calibration-re.md
+	"slicer/orcaslicer/Kobra S1 ShedNaja 0.4 nozzle.orca_printer")
 
 [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "commit your changes first (only HEAD is exported)"; exit 1; }
 
