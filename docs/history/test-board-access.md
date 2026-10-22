@@ -1,5 +1,16 @@
 # Getting access to the test host board (variant A: backup + Wi-Fi → Rinkhals → SSH)
 
+> **Development log, not a how-to.** This page records an experiment or test from the
+> development of ShedNaja (getting SSH on a spare host board through Rinkhals, 2026-10-20). Commands, slot names and file paths in it describe the
+> setup at that time and can be wrong or **destructive** on a printer installed today (for
+> example, writing "the inactive slot" can overwrite the stock fallback). Paths under `dumps/`,
+> `logs/` and `build/` refer to unpublished development files. Current documentation:
+> [docs/README.md](../README.md).
+
+> `swu/ks1_backup_wifi/wpa_supplicant.conf` is not in the repository (it holds Wi-Fi
+> credentials). To use the package, create it yourself: a stock-style `wpa_supplicant.conf`
+> with `ctrl_interface=/var/run/wpa_supplicant`, `update_config=1` and one `network={...}` block.
+
 ## Why over USB
 - The firmware has **no recovery AP**. `hostapd`/`dnsmasq` exist (Rockchip SDK), but the Anycubic app never starts them. `wifi_start.sh` only connects as a client.
 - On USB insertion (udev `61-udisk-auto-mount.rules`), the stock firmware runs `/userdata/channel.sh`. That script takes `<usb>/aGVscF9zb3Nf/update.swu` (zip with a fixed password), extracts `update_swu/setup.tar.gz` and **runs `update.sh` as root**. There is no signature check. Rinkhals installs the same way.

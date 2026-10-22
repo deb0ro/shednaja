@@ -1,5 +1,16 @@
 # Phase 2 – Klipper MCU firmware on the motion board (test board, SWD)
 
+> **Development log, not a how-to.** This page records an experiment or test from the
+> development of ShedNaja (flashing community and our own MCU firmware, 2026-10-20/22). Commands, slot names and file paths in it describe the
+> setup at that time and can be wrong or **destructive** on a printer installed today (for
+> example, writing "the inactive slot" can overwrite the stock fallback). Paths under `dumps/`,
+> `logs/` and `build/` refer to unpublished development files. Current documentation:
+> [docs/README.md](../README.md).
+
+> **Do not flash the MCUs to install ShedNaja.** ShedNaja runs with the Anycubic MCU firmware
+> v1.4.3 that stock firmware 2.7.2.7 installs; see [docs/mcu.md](../mcu.md). The v2.0.12/v2.0.13
+> images below were experiments; the v2.0.13 patch and binaries are not published.
+
 ## Build
 - Source: `Kobra-S1/klipper-kobra-s1`, branch `Kobra-S1-Dev`, commit in `build/mcu/SOURCE_COMMIT`. Built in WSL Ubuntu 24.04 with `./build.sh --clean` (arm-none-eabi-gcc 13.2).
 - Config `build/mcu/kobra_s1_mcu.config`: STM32F103 (stm32f103xe), 8 MHz crystal, **120 MHz** (like the community v2.0.12 and Anycubic 1.4.3; the stock 1.4.0 on the test board ran at 72 MHz), USART1 PA10/PA9 @ **576000**, `INITIAL_PINS=PB4`, app at **0x08008000**, APP2 0x08012000, factory 0x0801C000, OTA record 0x0801E000.

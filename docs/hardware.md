@@ -1,56 +1,79 @@
-# Anycubic Kobra S1 – hardware notes
+# Anycubic Kobra S1 – hardware
 
-Source: photos in `reference/` (test boards, 2026-10-19).
+What is known about the electronics, from the boards, the stock firmware and tests under
+ShedNaja. Photos of the boards: `reference/board_*.jpg`. Peripherals (fans, sensors,
+camera, light, buzzer, ACE Pro) and their pins: [peripherals.md](peripherals.md).
 
 ## NF031_UPPER_V2.1 – host board (Linux)
 
 | Ref | Part | Notes |
 |---|---|---|
-| U1 | Rockchip **RV1106G3** (date 2439) | Cortex-A7 single core, 256 MB DDR3L in package, RISC-V MCU core, NPU |
-| U2 | FORESEE **FEMDNN008G-08A39** | 8 GB eMMC (`/dev/mmcblk0`, A/B layout per Rinkhals docs) |
-| U23 | Fn-Link **6223A-SRD** | Realtek RTL8723DS, SDIO Wi-Fi b/g/n + BT 4.2; mainline driver `rtw88_8723ds` (≥ 6.5), vendor driver in Rockchip SDK |
-| SW1 | tact switch next to SoC | Probably maskrom/recovery (like SW2 on Kobra 3) – TO VERIFY |
-| J1 | 3-pin `GND RX TX` | Debug UART, expect 3.3 V, 1 500 000 baud – TO VERIFY |
-| J5 | FPC (right edge) | Display + touch |
-| U11 | QFN (left side) | Unidentified – USB hub? needs close-up |
-| Back | `USB` silkscreen, TP7, U6 (TSSOP), test points TP1–TP34 | USB D+/D− probably reachable here; a factory bodge wire is near C31 |
+| U1 | Rockchip **RV1106G3** | Cortex-A7 single core 1416 MHz, 256 MB DDR3 in package (215 MB visible to Linux), RISC-V MCU core, NPU |
+| U2 | FORESEE **FEMDNN008G-08A39** | 8 GB eMMC (`/dev/mmcblk0`), A/B partition layout ([update.md](update.md)) |
+| U23 | Fn-Link **6223A-SRD** | Realtek RTL8723DS: Wi-Fi b/g/n on SDIO, Bluetooth 4.2 on UART1 (`ttyS1`, H5 @115200) |
+| J1 | 3-pin `GND RX TX` | **Serial console: UART2 (GPIO1_B2/B3), 3.3 V, 115200 Bd.** The DDR blob prints to it; SPL and U-Boot are silent. The stock kernel has its console off; ShedNaja's kernel logs to it from the first line and runs a getty (FIQ debugger, `ttyFIQ0`) |
+| J5 | FPC | 800×480 RGB display + FocalTech touch (I2C3, `fts_ts` @0x38) |
+| J6 | harness to the lower board | power for the host board and signals from the lower board (pinout not traced) |
+| SW1 | tact switch next to the SoC | unknown; maybe recovery/maskrom (TODO: read `in_voltage0_raw` of SARADC channel 0 while pressing it) |
+| U11 | QFN, left side | not identified |
+| Back | `USB` silkscreen, test points | the SoC's only USB2 port (host mode) feeds a GL850G hub (camera, rear USB/ACE); the lines needed for maskrom are not traced yet |
 
-## U9 LQFP64 pinout (GD32F303Rx, GD32F303xB datasheet Rev1.1, Fig. 2-3 / Table 2-4, from the [GD32F303 product page](https://www.gigadevice.com/product/mcu/main-stream-mcus/gd32f30x-series/gd32f303))
-Assumes the "GD32FCES RBT6" is pin-compatible with GD32F303Rx/STM32F103Rx (standard for GD32 LQFP64 – confirm via SWD IDCODE).
+Host GPIOs used by ShedNaja: gpio41 (GPIO1_B1) USB switch, gpio116 (GPIO3_C4) MCU reset,
+gpio117 (GPIO3_C5) chamber light, PWM0 (GPIO1_A2) buzzer, PWM1 backlight.
 
-| Pin | Signal | Note |
-|---|---|---|
-| 1 | VBAT | corner with pin-1 mark |
-| 7 | NRST | |
-| 12 / 13 | VSSA / VDDA | |
-| 18 / 19 | VSS_4 / VDD_4 | |
-| 31 / 32 | VSS_1 / VDD_1 | |
-| 42 / 43 | PA9 / PA10 | USART0 TX/RX = factory serial bootloader |
-| **46** | **PA13 = SWDIO** | |
-| **47 / 48** | **VSS_2 / VDD_2** | |
-| **49** | **PA14 = SWCLK** | |
-| 60 | BOOT0 | |
-| 63 / 64 | VSS_3 / VDD_3 | |
+Boot chain: BootROM → idblock (DDR blob, SPL with A/B slots) → U-Boot (FIT) → kernel (FIT).
+**Secure boot is not enforced**: the FIT images carry hashes but no signatures, and U-Boot has
+no public key ([firmware-analysis.md](firmware-analysis.md)).
 
-Numbering is counter-clockwise from pin 1: 1–16 on side A, 17–32 on side B, 33–48 on side C, 49–64 on side D, so pin 64 is next to pin 1. SWD sits in the corner where 48 meets 49, i.e. at the far end of the side that starts with pin 64 next to pin 1.
-
-## NF031_LOWER_V2.2 – motion board (MCU)
+## NF031_LOWER_V2.2 – motion board (main MCU)
 
 | Ref | Part | Notes |
 |---|---|---|
-| U9 | GigaDevice, marked **GD32FCES RBT6** (PJ2523) | No public datasheet for this marking. RBT6 = LQFP64, 128 KB flash. Likely a custom/OEM GD32F30x-class part (Cortex-M3/M4). The Kobra-S1 Klipper fork builds it as STM32. Confirm with SWD: DBGMCU_IDCODE + flash-size register |
-| Y4 | 8.000 MHz crystal (JSCC) | HSE 8 MHz |
-| P7 | 5 pads, pad 1 = square | **SWD header, measured 2026-10-20:** 1 = VDD 3V3 (pin 48), 2 = GND, 3 = SWDIO (pin 46), 4 = SWCLK (pin 49), 5 = NRST (pin 7) |
-| P6 | 3-pin `TX1 RX1 GND` | MCU UART (probably the host link or debug) |
-| Back | TP14–TP59 | Test points incl. probably SWD/BOOT0 |
-| — | 3× stepper (X, Y, Z) under heatsink, 24 V input, FAN, BED-CTRL, T1 (thermistor) | |
+| U9 | GigaDevice, marked **GD32FCES RBT6** | GD32F30x high density (DBGMCU_IDCODE dev id 0x414), **Cortex-M4** r0p1, 128 KB flash, LQFP64. Klipper builds it as stm32f103xe. **RDP and write protection are off** |
+| Y4 | 8.000 MHz crystal | HSE |
+| P7 | 5 pads, pad 1 square | **SWD:** 1 = 3V3, 2 = GND, 3 = SWDIO (pin 46), 4 = SWCLK (pin 49), 5 = NRST (pin 7). The firmware turns SWD off at runtime: attach under reset (hold NRST low) |
+| P6 | 3-pin `TX1 RX1 GND` | USART1 (PA9/PA10), the MCU's Klipper serial port |
+| — | 3× stepper drivers (TMC2209) under the heatsink, 24 V input, fans, bed, thermistor | |
 
-## Cabling (bench setup)
-- The wide black FPC on the upper board's **J5** goes to the **touch display** (the upper board sits in the display housing). It is not a power cable.
-- On the bench the lower board gets 24 V into its `24V` connector. The upper board then boots to the Anycubic logo with the display attached, so the host gets its power from the lower board through the multi-wire harness (lower J1 ↔ upper J6). Pinout not traced yet: probably 24 V or 5 V, GND and a data link (UART or USB) to the MCU.
+The host talks to the main MCU on `/dev/ttyS3` (UART3) and to the toolhead MCU on
+`/dev/ttyS5` (UART5), both 576000 Bd, Klipper protocol. Both MCUs run the Anycubic firmware
+v1.4.3 (Klipper-based, 120 MHz) with the Anycubic IAP bootloader at 0x08000000 and the
+application at 0x08008000: [mcu.md](mcu.md).
+
+### U9 LQFP64 pins used for debugging
+
+Pinout of GD32F303Rx (GD32F303xB datasheet Rev1.1, Fig. 2-3 / Table 2-4, from the
+[GD32F303 product page](https://www.gigadevice.com/product/mcu/main-stream-mcus/gd32f30x-series/gd32f303)).
+
+| Pin | Signal |
+|---|---|
+| 7 | NRST |
+| 42 / 43 | PA9 / PA10 = USART0 TX/RX (factory serial bootloader) |
+| **46** | **PA13 = SWDIO** |
+| 47 / 48 | VSS_2 / VDD_2 |
+| **49** | **PA14 = SWCLK** |
+| 60 | BOOT0 |
+| 1, 12/13, 18/19, 31/32, 63/64 | VBAT, VSSA/VDDA, VSS/VDD pairs |
+
+Numbering is counter-clockwise from pin 1 (16 per side), so pin 64 is next to pin 1 and
+the SWD pins sit at the corner where pin 48 meets pin 49.
+
+## Toolhead board
+
+Toolhead MCU (Klipper `nozzle_mcu`, same firmware image as the main MCU): extruder
+stepper + TMC2209, hotend heater and thermistor, part and hotend fans, CS1237 load cell
+(the Z probe), LIS2DW12 accelerometer on SPI2, analog filament sensor. Pins: `kobra_s1.cfg`.
+
+## Bench setup
+
+- On the bench the lower board gets 24 V on its `24V` connector; the upper board is powered
+  from it through the harness (lower J1 ↔ upper J6) and boots to the logo with the display.
+- The wide FPC on the upper board's J5 goes to the touch display (the upper board sits in
+  the display housing).
 
 ## Open questions
-- Is secure boot (OTP keys) enabled on the RV1106? → check the U-Boot log on J1.
-- Which connector carries the USB used for maskrom (`2207:110c`)?
-- Is RDP (read protection) set on the GD32? → SWD read attempt.
-- How does the host reach the MCUs (UART on P6 vs. USB)?
+
+- SW1: recovery / maskrom button?
+- Maskrom over USB (`2207:110c`): where the SoC's USB D+/D− can be reached before the hub.
+- gpio118 (toggled by stock together with the MCU reset) and an input GPIO watched by the
+  stock UI: not identified.

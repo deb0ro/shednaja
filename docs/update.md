@@ -60,7 +60,7 @@ bundles the last one by name is used.
 **First install from the stock firmware (USB installer):**
 `bash tools/make_install_swu.sh [bundle.tar]` wraps a bundle into
 `build/install/aGVscF9zb3Nf/update.swu` (the stock USB update format, see
-docs/test-board-access.md). Copy the `aGVscF9zb3Nf` folder to the root of a FAT32 stick and
+docs/history/test-board-access.md). Copy the `aGVscF9zb3Nf` folder to the root of a FAT32 stick and
 plug it into the printer running stock. The stock `channel.sh` unpacks it to
 `/useremain/update_swu` and runs `swu/shednaja_install/update.sh`, which requires a complete
 bundle (boot, oem and system, so a first install never leaves a mix of stock and ShedNaja;
@@ -124,11 +124,8 @@ and left init, dropbear and wpa_supplicant running from the old root. The write 
 readback were correct, but those processes then faulted on pages of the overwritten
 system_b, init died, and the board hung until it was power-cycled.
 
-**A kernel panic does not reboot this board** (seen in that test, `panic=5` is set): it
-hangs until power-cycled. So a broken slot B does not fall back to stock A on its own; each
-power cycle uses one of SPL's 7 tries, then A boots. A power loss while writing therefore
-means: power-cycle up to 7 times, then stock A comes up and `tools/flash_slot.sh` can write
-slot B again.
+A power loss while an update is being written leaves the ShedNaja slot broken; see
+[If ShedNaja does not start](#if-shednaja-does-not-start).
 
 ## Back to stock
 
@@ -144,6 +141,31 @@ power-cycled, because the MCUs were still running in the state Klipper left them
 `printer.kobra_slot.slot` reports the running slot. `printer-data-init` only installs
 missing config files, so a printer set up before this needs `[kobra_slot]` and the macro
 added by hand.
+
+## If ShedNaja does not start
+
+How the fallback works: SPL boots the slot with the highest priority and counts its
+`tries_remaining` down (7). `S99kobra-bootok`, the last init script, marks the boot good and
+re-arms the 7 tries. A slot that never gets that far runs out of tries and SPL boots the
+other slot (stock).
+
+- **Kernel panic or hang before `S99kobra-bootok`:** the board does **not** reboot by itself
+  (a panic hangs it, `panic=5` notwithstanding). Power-cycle the printer; each power cycle
+  uses one try, so after **up to 7 power cycles** stock comes up. Then run the installer
+  stick again to rewrite the ShedNaja slot.
+- **ShedNaja boots but something does not work** (Klipper, Wi-Fi, display): the boot still
+  reaches `S99kobra-bootok`, so **there is no automatic fallback**. Ways back to stock:
+  - `REBOOT_TO_STOCK` in Mainsail or HelixScreen, if either works;
+  - over SSH: `kobra-abctl other && reboot`;
+  - on the serial console (J1, 115200, [hardware.md](hardware.md)): log in as root, same
+    command.
+
+  Without network, display and serial console there is no way back yet (TODO: a recovery
+  trigger from a USB stick or a button).
+- **Hang after `S99kobra-bootok`:** no watchdog yet, power-cycle.
+
+Stock itself is never written by ShedNaja, so once it runs it works as before; its own
+updates may move it to the other slot (the installer handles either layout).
 
 ## Test log
 

@@ -1,5 +1,12 @@
 # Enabling the UART2 console on the test host board (slot A)
 
+> **Development log, not a how-to.** This page records an experiment or test from the
+> development of ShedNaja (serial console on J1 with the stock kernel, 2026-10-20). Commands, slot names and file paths in it describe the
+> setup at that time and can be wrong or **destructive** on a printer installed today (for
+> example, writing "the inactive slot" can overwrite the stock fallback). Paths under `dumps/`,
+> `logs/` and `build/` refer to unpublished development files. Current documentation:
+> [docs/README.md](../README.md).
+
 ## What changes
 `build/boot_console.img` (from `tools/fit_patch_console.py`) = stock kernel FIT where only the DTB is changed:
 - `/serial@ff4c0000` (UART2 → `ttyS2`, pins GPIO1_B2/B3 = J1) `status = "okay"`

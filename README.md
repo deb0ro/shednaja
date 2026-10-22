@@ -20,21 +20,26 @@ stock stays in one, ShedNaja goes into the other, and you can switch between the
 | Probe | Load-cell (CS1237) nozzle probe: Z homing, `BED_MESH_CALIBRATE`, `PROBE_ACCURACY` |
 | Input shaper | `SHAPER_CALIBRATE` with the LIS2DW12 accelerometer in the toolhead |
 | Heaters, fans | Nozzle, bed, part / auxiliary / exhaust fans, controller fan |
-| Sensors | Toolhead filament runout sensor (pause, insert, resume) |
-| Display | HelixScreen on the 4.3" touch screen |
-| Web | Mainsail + Moonraker on port 80, camera stream (MJPEG, 15 fps) |
-| Extras | Chamber light, buzzer (`M300`), Wi-Fi (uses your stock Wi-Fi settings), Bluetooth |
+| Sensors | Toolhead filament runout sensor: pauses on runout, detects insertion (a full runout-and-resume during a print is not tested yet) |
+| Display | HelixScreen on the 800×480 touch screen |
+| Web | Mainsail + Moonraker on port 80, camera stream (MJPEG, 640×480, 15 fps) |
+| Extras | Chamber light, buzzer (`M300`), Wi-Fi (uses your stock Wi-Fi settings). The Bluetooth controller comes up, but nothing uses it yet (no pairing tools) |
 | Updates | Over SSH or from a USB stick, with a progress screen; reads back what it wrote |
 | Back to stock | `REBOOT_TO_STOCK` macro (Mainsail / HelixScreen), one tap |
 
 ## What does not work (yet)
 
-- **ACE Pro** (multi-colour unit): no driver yet.
+- **ACE Pro** (multi-colour unit): not supported yet. The ACEPRO driver is in the image for
+  later integration, inactive ([docs/peripherals.md](docs/peripherals.md#ace-pro)).
 - **Power-loss recovery**: not implemented.
 - Anycubic cloud, Anycubic app and the Anycubic slicer's printer integration: not supported,
   and not planned. Use Mainsail / Moonraker (OrcaSlicer, Klipper-compatible slicers).
 - Tested with stock firmware **2.7.2.7** and the Anycubic MCU firmware **v1.4.3** that
-  comes with it. Other versions: unknown.
+  comes with it. Other versions: unknown. ShedNaja does not flash the MCUs ([docs/mcu.md](docs/mcu.md)).
+- Tested with stock in slot A and ShedNaja in slot B. The installer also handles stock in
+  slot B (ShedNaja then goes into A), but that layout is not tested on a printer yet.
+- If ShedNaja boots but Klipper, Wi-Fi and the display all fail, there is no automatic way
+  back to stock yet: you need SSH or the serial console ([docs/update.md](docs/update.md#if-shednaja-does-not-start)).
 
 ## Requirements
 
@@ -153,11 +158,10 @@ Other packages come from Buildroot itself. Every version and checksum is pinned 
 | `swu/shednaja_install/` | the installer that runs from the stock USB updater |
 | `tools/` | build scripts, update bundle and installer packers, flashing and backup helpers |
 | `slicer/` | OrcaSlicer profile converter for ShedNaja's `PRINT_START` / `PRINT_END` |
-| `docs/` | how things work, and the development log with test results |
+| `docs/` | how things work; `docs/history/` the development log with test results |
 
-Good starting points: [docs/update.md](docs/update.md) (A/B slots, installer, updates),
-[docs/rootfs-build.md](docs/rootfs-build.md), [docs/kernel-build.md](docs/kernel-build.md),
-[docs/hardware.md](docs/hardware.md).
+Documentation index: [docs/README.md](docs/README.md). The current pages describe how
+things are now; `docs/history/` holds the development logs, which are not instructions.
 
 ## Safety
 

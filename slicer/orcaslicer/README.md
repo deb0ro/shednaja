@@ -26,7 +26,7 @@ The keys it sets are in `printer_overrides.json`:
 | Start G-code | `SET_PRINT_STATS_INFO TOTAL_LAYER=…`, `PRINT_START BED=… EXTRUDER=…` (the 3 min bed settle above 80 °C is in the macro) |
 | End G-code | `PRINT_END` |
 | Pause G-code | `PAUSE` (was `M601`) |
-| Change filament | `T[next_extruder]` (ACE Pro driver handles the rest) |
+| Change filament | `T[next_extruder]`: only for multi-colour prints with an ACE Pro, which ShedNaja does not support yet ([docs/peripherals.md](../../docs/peripherals.md#ace-pro)); single-filament prints never emit it |
 | After layer change | `SET_PRINT_STATS_INFO CURRENT_LAYER=…` (layer shown in Mainsail/HelixScreen) |
 
 Physical printer in OrcaSlicer: Host type **Octo/Klipper**, hostname = printer IP.

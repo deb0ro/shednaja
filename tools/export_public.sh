@@ -11,7 +11,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 DIR=${1:-build/publish/shednaja}
 MSG=${2:-}
-EXCLUDE=(analysis/re_cs1237 patches reference/boards_overview.webp docs/cs1237-calibration-re.md)
+EXCLUDE=(analysis/re_cs1237 patches reference/boards_overview.webp docs/history/cs1237-calibration-re.md)
 
 [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "commit your changes first (only HEAD is exported)"; exit 1; }
 

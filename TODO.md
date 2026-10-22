@@ -4,7 +4,7 @@
 
 - Rename the local repository folder (still `KobraS1_` + the old name) and pick the
   remote name `shednaja`. The project itself is renamed to ShedNaja (2026-10-22).
-- External review (EXT_REVIEW.txt), still open before a community alpha:
+- From the external review, still open before a community alpha:
   - one complete, tested install path for the supported stock firmware and MCU versions,
     including a tested restore; ShedNaja in slot A is not tested yet
   - long tests: runout during a print, insert and resume, unload, cancel, a long print with
@@ -31,5 +31,9 @@
   through the GL850G hub; "USB" test pads on the back of the upper board).
 - ACE Pro: driver (`kobra-acepro`, inactive), T0-T3 macros, Spoolman per slot.
 - A/B update variant with our system in both slots.
+- Recovery without network: a way back to stock when ShedNaja boots but neither the web UI,
+  the display nor SSH works (USB stick trigger or a button); a watchdog for hangs.
+- ACE Pro: port the ACEPRO macro calls (`TO_THROW_POSITION`, `FLUSH_POOP`, ...) to
+  `kobra_macros.cfg`.
 - Printing: Z-offset fine tuning, flow and pressure advance calibration, runout test
   during a print, UNLOAD_FILAMENT test, back-left bed corner (about 0.87 mm low).

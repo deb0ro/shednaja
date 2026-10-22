@@ -17,7 +17,7 @@ Q="qemu-arm-static -L $T"
 W=$(mktemp -d); trap 'kill $MR_PID 2>/dev/null; rm -rf "$W"' EXIT
 fail=0
 # MCU dictionaries: the Anycubic firmware v1.4.3 the printer runs by default (from the
-# official update, see docs/mcu-flash-test.md), else the fork builds. Override with
+# official update, see docs/mcu.md), else the fork builds. Override with
 # MCU_DICT / NOZZLE_DICT.
 STOCK_DICT=$ROOT/build/stock/firmware_v1.4.3.dict	# tools/fetch_stock.sh
 if [ -f "$STOCK_DICT" ]; then

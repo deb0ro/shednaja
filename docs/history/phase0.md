@@ -1,5 +1,17 @@
 # Fáze 0: přístup a záloha (jen čtení)
 
+> **Development log, not a how-to.** This page records an experiment or test from the
+> development of ShedNaja (phase 0: read-only access and backup of the test boards, 2026-10-19/20; in Czech). Commands, slot names and file paths in it describe the
+> setup at that time and can be wrong or **destructive** on a printer installed today (for
+> example, writing "the inactive slot" can overwrite the stock fallback). Paths under `dumps/`,
+> `logs/` and `build/` refer to unpublished development files. Current documentation:
+> [docs/README.md](../README.md).
+
+> Later results replace some conclusions below: the console on J1 runs at 115200 Bd (not 1.5 M),
+> and the boot images are **not** signed (see [firmware-analysis.md](../firmware-analysis.md)).
+> `.venv` is a Python virtual environment with `pyserial` (`python -m venv .venv` and
+> `.venv\Scripts\pip install pyserial`).
+
 Cíl: získat boot log hostitele a záložní kopii firmwaru MCU. Nic se nezapisuje.
 
 ## Napájení testovacích desek
@@ -59,7 +71,7 @@ Cíl: získat boot log hostitele a záložní kopii firmwaru MCU. Nic se nezapis
 - Secure boot: **partially.** boot_a/b is a **signed FIT** (`sha256,rsa2048`, `signature`, `key-name-hint`). U-Boot contains a `signature` node, `rollback-index` and `rockchip,rv1106-secure-otp`; no `required` string found. Non-secure OTP readable (`rockchip-otp0`), secure-OTP state unknown from Linux (no OP-TEE device). → Whether BootROM/U-Boot **enforce** signatures has to be tested on the test board once maskrom recovery works.
 - **MCU over SWD (2026-10-20), test board NF031_LOWER_V2.2:**
   - Normal attach fails (`cannot read IDR`): the firmware disables or remaps SWD at runtime. It **works with manual connect-under-reset**: hold P7 pad 5 (NRST) to pad 2 (GND), run `tools/swd/gd32_under_reset.cfg`, release when prompted. The vector catch halts the core before the firmware runs.
-  - DPIDR `0x2ba01477`, CPU **Cortex-M4 r0p1** (CPUID `0x410FC241`), DBGMCU_IDCODE `0x21040414` (dev id 0x414 = GD32F30x high-density), flash-size register **128 KB**, UID `873B4069 0EB01224 30303531`.
+  - DPIDR `0x2ba01477`, CPU **Cortex-M4 r0p1** (CPUID `0x410FC241`), DBGMCU_IDCODE `0x21040414` (dev id 0x414 = GD32F30x high-density), flash-size register **128 KB**.
   - **RDP off** (option byte RDP = `0x5AA5`, OBR = `0x03FFFFFC`), **no write protection** (WRPR = `0xFFFFFFFF`).
   - Dump: `dumps/mcu_ur_20261020_111219_flash.bin` (128 KB, SHA256 `62b05a34…42cfaebe`), plus `_sysmem.bin`. The 128 KB above the reported size reads back as all 0xFF.
   - Flash map:

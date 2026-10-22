@@ -6,9 +6,11 @@
 # it does not, so only the bytes up to the end of AvbABData are compared.)
 #
 #   bash rootfs/package/kobra-abctl/test/compare_with_rk_ota.sh [dump dir]
+# The dump dir is an eMMC backup of your printer (tools/backup_emmc.sh): it needs misc.img
+# and system_a.img (the stock rootfs with rk_ota).
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../../.." && pwd)
-DUMP=${1:-$ROOT/dumps/emmc_20261020_095608}
+DUMP=${1:?usage: compare_with_rk_ota.sh <eMMC backup dir with misc.img and system_a.img>}
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 command -v qemu-arm-static >/dev/null || { echo "needs qemu-arm-static"; exit 1; }
 

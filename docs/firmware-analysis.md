@@ -1,6 +1,9 @@
 # Stock firmware analysis (FW 2.7.2.7, backups from 2026-10-20)
 
-Sources: `dumps/emmc_20261020_095608/`, `dumps/mcu_ur_20261020_111219_flash.bin`. Extracted files are in `analysis/`.
+Sources: a full eMMC backup and an SWD dump of the motion MCU of the development printer
+(`dumps/`, not published). Extracted files that can be shared are in `analysis/`; the boot,
+oem and system images of 2.7.2.7 can be reproduced from the official update with
+`tools/fetch_stock.sh`. The MCU app layout of v1.4.3 and how ShedNaja uses it: [mcu.md](mcu.md).
 
 ## Boot chain and signing – **secure boot is NOT enforced**
 
@@ -30,7 +33,7 @@ Sources: `dumps/emmc_20261020_095608/`, `dumps/mcu_ur_20261020_111219_flash.bin`
 | 0x08008000–0x08012000 | 40 KB slot | **Application** (Klipper MCU, 28 KB used, offset 0x8000) |
 | 0x08012000–0x0801E000 | 48 KB | **Backup / OTA staging area** (empty now) |
 | 0x0801E000 | 12 B used | **OTA record**: `00040100 78563412 00000000` → u32 `0x00010400` (likely app version **1.4.0**), magic `0x12345678`, u32 `0` = no update pending |
-| 0x0801F800 | 72 B used | **Board identity**: `01 00 …`, then `01 00 15 00` + ASCII `S0021MB260130033110B2` (21 chars, serial/HW ID) |
+| 0x0801F800 | 72 B used | **Board identity**: `01 00 …`, then `01 00 15 00` + a 21-character ASCII serial / hardware ID (board-specific, not reproduced here) |
 
 Bootloader logic (from strings + address constants 0x08008000 / 0x08012000 / 0x0801E000): "iap init" → read the OTA record → if an update is pending, check CRC32 (`app_fla:%x,crc32:%x,offset:%x`), copy backup → app (`Upgrade copy of backup area successful, ready goto app`), otherwise `No need to update the app` → `GotoApp->addr=0x8008000`. It logs on USART2 (0x40004800, PB10/PB11) and also touches USART0 (0x40013800).
 The application disables SWD at runtime → SWD only works with connect-under-reset.
