@@ -66,7 +66,7 @@ print state ahead of time: at every layer change (`SET_PRINT_STATS_INFO CURRENT_
 written by the ShedNaja OrcaSlicer profile) it writes the file and the position of the next
 line, the G-code position and modes, temperatures, fans, pressure advance, the bed mesh and
 the object list to `printer_data/power_loss_recovery.json` (temp file, fsync, rename). A
-completed or cancelled print removes it.
+completed or cancelled print removes it, and so does starting a new print.
 
 After a power cut the display shows "Interrupted print" and Mainsail a dialog (Resume /
 Later / Discard). `RESUME_INTERRUPTED`:

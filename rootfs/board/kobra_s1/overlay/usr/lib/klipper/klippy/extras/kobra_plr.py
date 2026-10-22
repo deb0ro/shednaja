@@ -5,7 +5,8 @@
 # file and position of the next line, the G-code position and modes, temperatures, fans,
 # pressure advance, the bed mesh and the object list go to a JSON file, written atomically
 # (temp file, fsync, rename, fsync of the directory). A finished or cancelled print removes
-# the file; after a power cut it stays and the next start offers to resume.
+# the file, and so does starting a new print; after a power cut it stays and the next start
+# offers to resume.
 #
 # _RESUME_INTERRUPTED (wrapped by RESUME_INTERRUPTED in kobra_macros.cfg) opens a
 # confirmation dialog; with CONFIRM=1 it
@@ -45,6 +46,7 @@ class KobraPLR:
         self.sdcard = self.printer.load_object(config, 'virtual_sdcard')
         self.prev_set_info = None
         self.last_state = None
+        self.resuming = False
         self.saved_layer = None
         self.gcode.register_command('_RESUME_INTERRUPTED', self.cmd_RESUME_INTERRUPTED,
                                     desc=self.cmd_RESUME_INTERRUPTED_help)
@@ -185,11 +187,24 @@ class KobraPLR:
 
     def _watch_state(self, eventtime):
         # a print that ends normally or is cancelled leaves nothing to resume; an
-        # error (e.g. an MCU shutdown) keeps the state, it may be worth resuming
-        state = self.print_stats.get_status(eventtime)['state']
+        # error (e.g. an MCU shutdown) keeps the state, it may be worth resuming.
+        # A new print (not our own resume, not RESUME after a pause) replaces it: the
+        # old one is off the bed, and a print without layer info would otherwise leave
+        # the old state to be offered after its own power cut.
+        ps = self.print_stats.get_status(eventtime)
+        state = ps['state']
         if state != self.last_state:
             if state in ('complete', 'cancelled') and self.last_state is not None:
                 self._clear()
+            elif (state == 'printing' and self.last_state not in ('printing', 'paused')
+                    and not self.resuming):
+                # keep a state the new print already saved before this check ran
+                saved = self._load()
+                started = time.time() - ps['total_duration']
+                if saved is not None and saved.get('saved', 0) < started:
+                    self._clear()
+            if state == 'printing':
+                self.resuming = False
             self.last_state = state
         return eventtime + 2.
 
@@ -271,13 +286,20 @@ class KobraPLR:
             run("M83\nG1 E1 F1800")
         if not state['absolute_coordinates']:
             run("G91")
-        run("G1 F%.1f" % (state['speed'] * 60.,))
+        # gcode_move's 'speed' is the G-code F value (mm/min), not mm/s
+        run("G1 F%.1f" % (state['speed'],))
         run("M117\nM23 %s\nM26 S%d" % (state['filename'], state['file_position']))
         # M23 resets the slicer info; the total is set again (CURRENT_LAYER would save a
         # state before the file position is in effect, it comes with the next layer)
         if state.get('total_layer'):
             run("SET_PRINT_STATS_INFO TOTAL_LAYER=%d" % (state['total_layer'],))
-        run("M24")
+        # _watch_state must not take this start for a new print and drop the state
+        self.resuming = True
+        try:
+            run("M24")
+        except Exception:
+            self.resuming = False
+            raise
 
     def _restore_mesh(self, state):
         mesh = state.get('mesh')
