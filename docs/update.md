@@ -69,9 +69,9 @@ bundle (boot and system, so a first install never leaves a mix of stock and Shed
 `tools/make_install_swu.sh` refuses partial bundles too; oem only if the bundle has one),
 checks the images (md5, stock busybox has no sha256sum), writes the ones that differ into the partitions of
 the slot stock is not running from (`root=` p8 → slot B, p9 → slot A) with readback,
-writes `installed.manifest`, switches to that slot with `rk_ota --misc=other --mode=retry`
-and reboots. The stock slot and /userdata are not written; on any
-error it beeps 5 times and stays on stock. Log: `shednaja-install.log` on the stick.
+writes `installed.manifest`, switches to that slot with `rk_ota --misc=other --mode=retry`,
+checks in `misc` that the slot now has the highest priority, and reboots. The stock slot
+and /userdata are not written; on any error it beeps 5 times and stays on stock. Log: `shednaja-install.log` on the stick.
 Since unchanged images are not rewritten, the same stick also brings a printer back to
 ShedNaja after `REBOOT_TO_STOCK`.
 
@@ -83,7 +83,8 @@ ShedNaja after `REBOOT_TO_STOCK`.
 2. Unpacks the bundle to `/useremain/shednaja/update/stage`, checks format, sizes, sha256 of
    every image and that it fits its partition; skips images identical to the partition.
    Manifest lines are strict: images must be named `<part>.img`, sizes numeric, sha256 64
-   hex digits, each partition once.
+   hex digits, each partition once. If the update stops before the handover (a failed
+   check, no confirmation, Ctrl-C), the unpacked images are removed again.
 3. Printer must be idle: with Klipper not running (USB update at boot) nothing can print;
    with Klipper running the Moonraker print state must be readable and not `printing` /
    `paused` (unless `--force`). Asks for confirmation unless `--yes`, and checks the state
