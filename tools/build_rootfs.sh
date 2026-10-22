@@ -128,7 +128,8 @@ log "build (-j$JOBS; first run downloads sources to $BR_DL and takes a while)"
 # backwards" in the journal). That trips autoconf's "newly created file is older than
 # distributed files" check, or makes make re-extract a package on top of itself
 # ("duplicate filename" patch error). OpenSSL's install step also relinks in parallel and
-# sometimes links against a half-written libcrypto.so ("file not recognized"). None of
+# sometimes links against a half-written libcrypto.so ("file not recognized") or loses a
+# dependency file ("mv: cannot stat '*.d.tmp'"). None of
 # these is a real build problem: wipe only the affected package's build dir and resume, a
 # few times at most. Parallel jobs print the cause well before the end of the log.
 : > "$OUT/build.log"
@@ -136,7 +137,7 @@ for attempt in 1 2 3 4 5 6; do
   if "${B[@]}" -j"$JOBS" >> "$OUT/build.log" 2>&1; then break; fi
   pkgdir=$(tail -150 "$OUT/build.log" | sed -n 's#.*\(/build/[^/ ]*\)/\.stamp_[a-z_]*\].*#\1#p' | tail -1)
   if [ "$attempt" -lt 6 ] && [ -n "$pkgdir" ] &&
-     tail -150 "$OUT/build.log" | grep -qE "Check your system clock|duplicate filename|clock skew|modification time .* in the future|file not recognized: file truncated"; then
+     tail -150 "$OUT/build.log" | grep -qE "Check your system clock|duplicate filename|clock skew|modification time .* in the future|file not recognized: file truncated|cannot stat .*\.d\.tmp"; then
     echo "  transient failure in ${pkgdir#/build/} (WSL clock jump or parallel-make race) - wiping it and retrying ($attempt/5)"
     rm -rf "$BR_OUT$pkgdir"
     continue

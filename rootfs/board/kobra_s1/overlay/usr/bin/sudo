@@ -1,0 +1,15 @@
+#!/bin/sh
+# ShedNaja has no sudo: every service runs as root. Moonraker ([machine] provider: none)
+# runs "sudo reboot" / "sudo poweroff" for Mainsail's Reboot and Shutdown buttons; this runs
+# the command directly. Options are accepted and ignored (-S reads no password).
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-p|-u|-g|-C|-D|-r|-t|-U) shift 2 ;;
+		--) shift; break ;;
+		-*) shift ;;
+		*) break ;;
+	esac
+done
+[ $# -eq 0 ] && exit 0
+[ "$(id -u)" = 0 ] || { echo "sudo: ShedNaja has no sudo, run this as root" >&2; exit 1; }
+exec "$@"

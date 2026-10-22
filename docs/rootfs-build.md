@@ -55,7 +55,7 @@ bash rootfs/tests/offline_check.sh    # optional, see "Offline checks"
 | numpy | 1.23.5 (`kobra-numpy`) | for `SHAPER_CALIBRATE`; Buildroot's numpy needs glibc/musl, ours adds an ARM `fenv.h` and a uClibc patch |
 | ACEPRO | Kobra-S1/ACEPRO V0.8.1 (`kobra-acepro`) | packaged, **inactive**; [peripherals.md](peripherals.md#ace-pro) |
 | Python | 3.11.6 + zlib, sqlite3, ssl, lzma, ctypes; greenlet, cffi, pyserial, jinja2, markupsafe, tornado, pillow, distro, libsodium (Buildroot); streaming-form-data, inotify-simple, libnacl, importlib-metadata, zipp, dbus-fast (our packages, sha256 pinned) | `sitecustomize.py`: `ctypes.util.find_library()` and `os.getloadavg()` for uClibc |
-| Base | busybox (+ ntpd, mdev, modprobe, i2c tools, rfkill, flock …), dropbear 2022.83, wpa_supplicant 2.10, e2fsprogs (e2fsck), lighttpd 1.4.69, wireless-regdb | |
+| Base | busybox (+ ntpd, mdev, modprobe, i2c tools, rfkill, flock …), iproute2 (`ip -json` for Moonraker), dropbear 2022.83, wpa_supplicant 2.10, e2fsprogs (e2fsck), lighttpd 1.4.69, wireless-regdb | |
 
 Not included on purpose: the Anycubic app/UI (`/ac_lib`, `/ac_app` are not mounted,
 K3SysUi/GoKlipper never start), bluez userspace, the stock vendor modules (rockit, rknpu,
@@ -120,8 +120,9 @@ of the image's file on every boot (busybox `passwd` rewrites it too).
   (calibration dialog in Mainsail).
 - `kobra_peripherals.cfg`: `[mcu host]`, chamber light, buzzer (`M300`), `[kobra_slot]` +
   `REBOOT_TO_STOCK`.
-- `moonraker.conf`: `[machine] provider: none` (no systemd; Mainsail's service buttons do
-  not work, use SSH), `trusted_clients` = LAN ranges, `[history]`, `[octoprint_compat]`,
+- `moonraker.conf`: `[machine] provider: none` (no systemd; Mainsail's service restart
+  buttons do not work, use SSH; Reboot and Shutdown work through `/usr/bin/sudo`, a
+  pass-through, since everything runs as root), `trusted_clients` = LAN ranges, `[history]`, `[octoprint_compat]`,
   `[webcam kobra_s1]`. No `update_manager`: updates come as images.
 
 ## Offline checks
