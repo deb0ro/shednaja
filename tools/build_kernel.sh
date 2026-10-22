@@ -81,6 +81,12 @@ export KBUILD_BUILD_USER=kobra KBUILD_BUILD_HOST=shednaja SOURCE_DATE_EPOCH=$(gi
 # the "#N" in uname -v is a per-object-dir build counter (.version): pin it, otherwise
 # every relink in the same KOUT changes the zImage
 export KBUILD_BUILD_VERSION=1
+# __FILE__ and debug paths without the SDK and object dir locations, so the output does
+# not depend on where the build runs (a clean clone gave different zImage and modules)
+# (real paths: kbuild resolves symlinks in the source dir)
+export KCFLAGS="-ffile-prefix-map=$(realpath -m "$KSRC")=. -ffile-prefix-map=$(realpath -m "$KOUT")=."
+# .S files: the assembler writes its own debug info (-Wa,-gdwarf-2), so it needs the map too
+export KAFLAGS="$KCFLAGS -Wa,--debug-prefix-map=$(realpath -m "$KSRC")=. -Wa,--debug-prefix-map=$(realpath -m "$KOUT")=."
 # LOCALVERSION empty -> release "5.10.160" exactly, same vermagic as the stock modules
 M=(make -C "$KSRC" O="$KOUT" ARCH=arm CROSS_COMPILE="$CROSS" LOCALVERSION= -j"$JOBS")
 

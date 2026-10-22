@@ -1,2 +1,4 @@
 # init scripts, configs and the C source must keep LF (busybox sh / Buildroot on Linux)
 * text eol=lf
+*.gz binary
+*.bmp binary

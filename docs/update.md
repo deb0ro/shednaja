@@ -15,7 +15,7 @@ needs stock with Rinkhals for SSH.
 slot stock is not running from, which is B on a factory printer but A once an official
 Anycubic update has moved stock to B. `/usr/libexec/kobra/current-slot` tells the scripts
 which slot they run from (U-Boot sets `root=` to `system_a` = p8 or `system_b` = p9).
-ShedNaja in slot A is not tested on a printer yet (stock is in A here).
+Both layouts are tested on printers (stock A / ShedNaja B, and stock B / ShedNaja A).
 
 The plan is to offer both variants, so everyone can decide. `inplace` keeps the stock
 firmware on the eMMC as the safety net. `ab` gives a real rollback to the previous ShedNaja
@@ -189,3 +189,10 @@ updates may move it to the other slot (the installer handles either layout).
   starts without error 11407 (it showed after a plain warm reboot). Back with the stock
   installer (`update.swu` from `ae32afc`): slot B already identical, only the slot switch,
   3 long beeps, ShedNaja boots.
+- 2026-10-22, first install as a new user: release build (no SSH key) from a fresh clone of
+  the public repository with fresh SDK and download dirs (`cb8a86f`), on a second host board
+  with stock 2.7.2.7 running from **slot B** (Rinkhals installed, MCUs v1.4.3). The stock
+  USB updater ran the installer, which wrote **slot A** and switched to it; ShedNaja came
+  up with the default config: Klipper ready, `kobra_slot` A, no config warnings, Mainsail and
+  the camera answered, HelixScreen wizard on the display, `passwd` over SSH kept on
+  `/userdata`. `REBOOT_TO_STOCK` brought stock back from slot B.

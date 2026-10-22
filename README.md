@@ -36,8 +36,8 @@ stock stays in one, ShedNaja goes into the other, and you can switch between the
   and not planned. Use Mainsail / Moonraker (OrcaSlicer, Klipper-compatible slicers).
 - Tested with stock firmware **2.7.2.7** and the Anycubic MCU firmware **v1.4.3** that
   comes with it. Other versions: unknown. ShedNaja does not flash the MCUs ([docs/mcu.md](docs/mcu.md)).
-- Tested with stock in slot A and ShedNaja in slot B. The installer also handles stock in
-  slot B (ShedNaja then goes into A), but that layout is not tested on a printer yet.
+- Tested in both slot layouts: stock in A with ShedNaja in B, and stock in B with ShedNaja
+  in A (install, display, password change, `REBOOT_TO_STOCK`).
 - If ShedNaja boots but Klipper, Wi-Fi and the display all fail, there is no automatic way
   back to stock yet: you need SSH or the serial console ([docs/update.md](docs/update.md#if-shednaja-does-not-start)).
 

@@ -5,8 +5,6 @@
 - Rename the local repository folder (still `KobraS1_` + the old name) and pick the
   remote name `shednaja`. The project itself is renamed to ShedNaja (2026-10-22).
 - From the external review, still open before a community alpha:
-  - one complete, tested install path for the supported stock firmware and MCU versions,
-    including a tested restore; ShedNaja in slot A is not tested yet
   - long tests: runout during a print, insert and resume, unload, cancel, a long print with
     the display and the camera in use (CPU load)
   - MCU: stock v1.4.3 is the default; v2.0.13 (CS1237 calibration port) stays an optional
@@ -16,8 +14,8 @@
   build (users run `tools/fetch_stock.sh`), or get the oem content cleared / rebuild it
   from sources. Same question for the stock BT firmware in the rootfs.
 - Announcement post (why, what works, what does not; README.md has the facts).
-- A full build on a clean machine from the public repository (fetch_stock, kernel, oem,
-  rootfs, installer), to catch missing host packages in the README list.
+- The README's apt package list on a fresh Linux install (the clean-clone build of
+  2026-10-22 ran in a WSL that already had every package).
 - Root password: a release could force a password change on first login (now the stock
   default `rockchip` stays until the owner runs `passwd`).
 
