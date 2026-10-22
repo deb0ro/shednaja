@@ -1,9 +1,12 @@
 {
-  "_comment": "ShedNaja: printer-profile keys that differ from an Anycubic-firmware Kobra S1 profile. Applied by tools/make_orca_bundle.py on top of the user's exported .orca_printer bundle; everything else (machine limits, retraction, filament and process presets) is kept. printer_name replaces the exported printer preset name; 'rename' is applied to the names (and file names, references) of all presets in the bundle.",
+  "_comment": "ShedNaja: printer-profile keys that differ from an Anycubic-firmware Kobra S1 profile. Applied by tools/make_orca_bundle.py on top of the user's exported .orca_printer bundle; everything else (machine limits, retraction, filament and process presets) is kept. printer_name replaces the exported printer preset name; 'rename' is applied to the names (and file names, references) of all presets in the bundle. Presets named in 'drop' are left out.",
   "printer_name": "Kobra S1 ShedNaja 0.4 nozzle",
   "rename": {
     " - MPC561": " - ShedNaja"
   },
+  "drop": [
+    "0.20mm Standard @Anycubic Kobra S1 0.4 nozzle - Copy"
+  ],
   "keys": {
     "gcode_flavor": "klipper",
     "host_type": "octoprint",

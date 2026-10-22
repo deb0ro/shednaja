@@ -44,6 +44,15 @@ def main():
             return {k: ren(x) for k, x in v.items()}
         return v
 
+    # presets listed in "drop" (by name in the source bundle) are left out
+    drop = set(ov.get("drop", []))
+    for n in [n for n in files if json.loads(files[n]).get("name") in drop]:
+        print("dropped: %s" % n)
+        del files[n]
+        for k in ("filament_config", "process_config", "printer_config"):
+            if n in bs.get(k, []):
+                bs[k].remove(n)
+
     out_files = {}
     changed = []
     for n, data in files.items():
