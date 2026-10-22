@@ -11,12 +11,13 @@
 #                                          authorized_keys; the build id gets "+devkey".
 #                                          Without it (release builds) root's keys live in
 #                                          /userdata/shednaja/ssh, set up by the owner.
-#   build/stock/                           (tools/fetch_stock.sh: stock root password hash,
-#                                          stock rtlbt firmware)
+#   Nothing from the stock firmware: the root password hash is generated (default password
+#   "rockchip", as stock) and the Bluetooth firmware in the image is Realtek's public copy
+#   (S42bluetooth copies the printer's own stock one from its ac_lib partition at boot).
 # Output: build/rootfs/rootfs.squashfs (+ manifest, size report). Nothing is flashed.
 #
 # Environment overrides: SDK_DIR, BT_DIR, BR_OUT (~/kobra/rootfs-out), BR_DL (~/kobra/br-dl),
-#   STOCK (dir from tools/fetch_stock.sh), JOBS, CLEAN=1 (wipe BR_OUT first), SSH_KEY.
+#   JOBS, CLEAN=1 (wipe BR_OUT first), SSH_KEY.
 set -euo pipefail
 
 case "$(uname -s)" in
@@ -24,7 +25,7 @@ case "$(uname -s)" in
     here=$(cd "$(dirname "$0")/.." && pwd)
     wpath="/mnt/$(echo "${here:1:1}" | tr 'A-Z' 'a-z')${here:2}"
     # Git Bash variables do not reach WSL: pass the overrides explicitly
-    envs=(); for v in CLEAN JOBS SDK_DIR BT_DIR BR_OUT BR_DL STOCK SSH_KEY; do [ -n "${!v:-}" ] && envs+=("$v=${!v}"); done
+    envs=(); for v in CLEAN JOBS SDK_DIR BT_DIR BR_OUT BR_DL SSH_KEY; do [ -n "${!v:-}" ] && envs+=("$v=${!v}"); done
     MSYS_NO_PATHCONV=1 exec wsl -d Ubuntu-24.04 -- env "${envs[@]}" bash "$wpath/tools/build_rootfs.sh" "$@" ;;
 esac
 
@@ -39,7 +40,6 @@ BR_TGZ_SHA256=087d0514696d191142f5d421c0e6d01575816499f75d7a5672b899e4393f6331
 BR_SRC=$HOME/kobra/br/$BR_VER
 BR_OUT=${BR_OUT:-$HOME/kobra/rootfs-out}
 BR_DL=${BR_DL:-$HOME/kobra/br-dl}
-STOCK=${STOCK:-$ROOT/build/stock}
 JOBS=${JOBS:-$(nproc)}
 OUT=$ROOT/build/rootfs
 KREL=5.10.160
@@ -82,17 +82,14 @@ if [ -n "${SSH_KEY:-}" ]; then
 fi
 
 rm -rf "$IN"; mkdir -p "$IN/rtlbt"
-[ -f "$STOCK/system.img" ] || { echo "missing $STOCK/system.img - run tools/fetch_stock.sh first"; exit 1; }
-ROOT_HASH=$(unsquashfs -cat "$STOCK/system.img" etc/shadow | sed -n 's/^root:\([^:]*\):.*/\1/p')
-case "$ROOT_HASH" in '$1$'*|'$5$'*|'$6$'*) ;; *) echo "could not read the stock root hash"; exit 1 ;; esac
-if [ -s "$STOCK/rtlbt/rtl8723d_fw" ] && [ -s "$STOCK/rtlbt/rtl8723d_config" ]; then
-  cp "$STOCK/rtlbt/rtl8723d_fw" "$STOCK/rtlbt/rtl8723d_config" "$IN/rtlbt/"
-  BTFW_SRC="stock ac_lib"
-else
-  echo "WARNING: stock rtlbt firmware not in $STOCK, using radxa/rkwifibt's (different config!)"
-  cp "$BT_DIR/firmware/realtek/RTL8723DS/rtl8723d_fw" "$BT_DIR/firmware/realtek/RTL8723DS/rtl8723d_config" "$IN/rtlbt/"
-  BTFW_SRC="radxa/rkwifibt $BT_COMMIT"
-fi
+# default root password "rockchip" (the stock one; the owner changes it with passwd).
+# md5crypt like stock (busybox login and dropbear verify it); fixed salt = reproducible
+ROOT_HASH=$(openssl passwd -1 -salt shednaja rockchip)
+case "$ROOT_HASH" in '$1$shednaja$'*) ;; *) echo "openssl passwd failed"; exit 1 ;; esac
+# fallback Bluetooth firmware: Realtek's, redistributable (radxa/rkwifibt); the printer's
+# own stock firmware is used when S42bluetooth finds it in the stock ac_lib partition
+cp "$BT_DIR/firmware/realtek/RTL8723DS/rtl8723d_fw" "$BT_DIR/firmware/realtek/RTL8723DS/rtl8723d_config" "$IN/rtlbt/"
+BTFW_SRC="radxa/rkwifibt $BT_COMMIT (fallback)"
 
 export KOBRA_TOOLCHAIN=$SDK_DIR/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf
 export KOBRA_DL_DIR=$BR_DL

@@ -9,8 +9,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 BUNDLE="${1:-$(ls -t build/update/shednaja-update-*.tar | head -n 1)}"
 [ -f "$BUNDLE" ] || { echo "no bundle $BUNDLE"; exit 1; }
-# a first install writes the whole system: refuse partial update bundles
-for part in boot oem system; do
+# a first install writes the whole system (boot + system; oem is optional): refuse partial
+# update bundles
+for part in boot system; do
 	tar -xOf "$BUNDLE" manifest | grep -q "^image $part $part.img " ||
 		{ echo "$BUNDLE has no $part image - an installer needs a complete bundle"; exit 1; }
 done

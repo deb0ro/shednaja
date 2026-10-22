@@ -9,10 +9,6 @@
     the display and the camera in use (CPU load)
   - MCU: stock v1.4.3 is the default; v2.0.13 (CS1237 calibration port) stays an optional
     experiment for the toolhead MCU only, its flow/PA calibration is not verified
-- Release images: `oem_ours.img` is the stock oem image with three modules replaced, so a
-  published installer redistributes Anycubic/Rockchip userspace. Either ship only the
-  build (users run `tools/fetch_stock.sh`), or get the oem content cleared / rebuild it
-  from sources. Same question for the stock BT firmware in the rootfs.
 - Announcement post (why, what works, what does not; README.md has the facts).
 - The README's apt package list on a fresh Linux install (the clean-clone build of
   2026-10-22 ran in a WSL that already had every package).

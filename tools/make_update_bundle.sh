@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Pack a ShedNaja update bundle for kobra-update (on the printer) / a USB stick.
 #
-#   bash tools/make_update_bundle.sh                       # boot + oem + system from build/
+#   bash tools/make_update_bundle.sh                       # boot + system from build/
 #   bash tools/make_update_bundle.sh --system build/rootfs/rootfs.squashfs   # only some
 #   options: --boot FILE  --oem FILE  --system FILE  --out FILE
 #
@@ -22,7 +22,9 @@ while [ $# -gt 0 ]; do
     shift
 done
 if [ ${#SRC[@]} -eq 0 ]; then
-    SRC=([boot]=build/kernel/boot.img [oem]=build/kernel/oem_ours.img [system]=build/rootfs/rootfs.squashfs)
+    # no oem: ShedNaja does not use the oem partition (stock's stays), and oem_ours.img is
+    # Anycubic/Rockchip userspace that releases must not carry; --oem for development
+    SRC=([boot]=build/kernel/boot.img [system]=build/rootfs/rootfs.squashfs)
 fi
 # build id of the rootfs build (with "+devkey" for a development build), else git
 BID=$(cat build/rootfs/BUILD_ID 2>/dev/null || git describe --always --dirty 2>/dev/null || echo unknown)

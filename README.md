@@ -95,23 +95,24 @@ Updates refuse to run while printing. Details: [docs/update.md](docs/update.md).
 
 ## Building from source
 
-Everything is built from public sources at pinned versions. The only files taken from
-Anycubic come from the **official stock update KS1_2.7.2.7.swu**. This repository does not
-contain them: `tools/fetch_stock.sh` downloads that file and checks its sha256.
+Everything is built from public sources at pinned versions, and the images ShedNaja
+installs contain no Anycubic files. The build reuses only the layout of the stock boot
+image as a template; that and the MCU dictionary for the offline test come from the
+**official stock update KS1_2.7.2.7.swu**, which this repository does not contain:
+`tools/fetch_stock.sh` downloads it and checks its sha256.
 
 **Host:** Linux (tested: Ubuntu 24.04, also under WSL2 on Windows; the scripts re-run
 themselves in WSL when started from Git Bash). About 15 GB of disk space.
 
 ```
 sudo apt install build-essential git curl unzip zip python3 python3-pip bc rsync cpio \
-    file wget squashfs-tools e2fsprogs device-tree-compiler libssl-dev flex bison \
+    file wget squashfs-tools e2fsprogs device-tree-compiler libssl-dev openssl flex bison \
     u-boot-tools qemu-user-static
 ```
 
 ```
-bash tools/fetch_stock.sh             # stock boot/oem/system images, BT firmware, MCU dictionary -> build/stock/
+bash tools/fetch_stock.sh             # stock boot image (layout template), MCU dictionary -> build/stock/
 bash tools/build_kernel.sh            # kernel 5.10.160, Wi-Fi/BT modules, boot.img -> build/kernel/
-bash tools/build_oem_ours.sh          # stock oem image with our kernel's modules -> build/kernel/oem_ours.img
 bash tools/build_rootfs.sh            # Buildroot rootfs (squashfs) -> build/rootfs/
 bash rootfs/tests/offline_check.sh    # optional: klippy, Moonraker, lighttpd under qemu
 bash tools/make_update_bundle.sh      # -> build/update/shednaja-update-<id>.tar
@@ -132,21 +133,21 @@ in total).
 | Mainsail, mainsail-config | [mainsail-crew](https://github.com/mainsail-crew) | 2.19.0, v1.2.1 |
 | HelixScreen | [prestonbrown/helixscreen](https://github.com/prestonbrown/helixscreen) | 1.0.6 |
 | numpy (input shaper) | [numpy/numpy](https://github.com/numpy/numpy) | 1.23.5 |
-| Stock files (boot template, oem image, BT firmware, root hash, MCU dictionary) | official Anycubic update `KS1_2.7.2.7.swu`, via the [Rinkhals firmware archive](https://rinkhals.firmwareforge.org/) | sha256 `e3f22184…` |
+| Stock files used by the build (boot image layout, MCU dictionary) | official Anycubic update `KS1_2.7.2.7.swu`, via the [Rinkhals firmware archive](https://rinkhals.firmwareforge.org/) | sha256 `e3f22184…` |
 
 Other packages come from Buildroot itself. Every version and checksum is pinned in
 `tools/build_*.sh` and `rootfs/package/*/`.
 
 ### What comes from the stock firmware
 
-- **boot.img:** our kernel and device tree, packed into the stock FIT layout. Only the
-  stock image's structure is reused, and our own boot logo replaces the stock one.
-- **oem image:** the stock `oem` squashfs (Rockchip userspace libraries, kernel modules
-  loaded from `/oem`). The three modules that must match our kernel (RTL8723DS, hci_uart,
-  cfg80211) are replaced with our builds; everything else is unchanged Anycubic/Rockchip
-  content. It is built on your machine from the downloaded stock file and is not part of
-  this repository.
-- **Bluetooth firmware** of the RTL8723DS and the stock root password hash.
+The installed images (boot and system) contain no Anycubic or Rockchip binaries:
+- **boot.img:** our kernel, device tree and boot logo, packed into the stock FIT layout
+  (only the header structure of the stock image is reused).
+- **oem partition:** not written. ShedNaja does not use it; the stock one in that slot stays.
+- **Bluetooth firmware:** at the first boot ShedNaja copies the printer's own stock
+  firmware from its stock `ac_lib` partition (read-only) to `/userdata/shednaja/rtlbt`.
+  The image carries Realtek's public copy only as a fallback.
+- **Root password:** the default `rockchip` (as on stock) is hashed at build time.
 - The MCUs keep running Anycubic's firmware v1.4.3; ShedNaja does not flash them.
 
 ## Repository layout

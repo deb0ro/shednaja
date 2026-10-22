@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
-# The stock files the build reuses, taken from the official Anycubic update KS1_2.7.2.7.swu
-# (never from this repository: Anycubic's files are not ours to redistribute).
+# Stock files used only by development tools, taken from the official Anycubic update
+# KS1_2.7.2.7.swu (never from this repository: Anycubic's files are not ours to
+# redistribute). The images ShedNaja installs contain none of them.
 #
 #   bash tools/fetch_stock.sh [KS1_2.7.2.7.swu]     # from Git Bash (re-runs itself in WSL) or WSL/Linux
 #
 # Without an argument the .swu is downloaded from the Rinkhals project's archive of the
 # official stock updates. Either way its sha256 must match the pin below.
 # Output: build/stock/
-#   boot.img     stock boot image: template for our FIT image (tools/build_kernel.sh)
-#   oem.img      stock oem squashfs: base of oem_ours.img (tools/build_oem_ours.sh)
-#   system.img   stock rootfs: the stock root password hash (tools/build_rootfs.sh)
-#   rtlbt/       stock Bluetooth firmware + config for the RTL8723DS (from ac_lib.img)
+#   boot.img     stock boot image: layout template for our FIT image (tools/build_kernel.sh;
+#                only its header structure is reused, kernel/DTB/logo are ours)
+#   oem.img      stock oem squashfs: base of oem_ours.img (tools/build_oem_ours.sh, optional,
+#                development only: ShedNaja does not install an oem image)
 #   firmware_v1.4.3_20260303.bin   Anycubic MCU firmware (both MCUs run it)
 #   firmware_v1.4.3.dict           its Klipper data dictionary (rootfs/tests/offline_check.sh)
-# Needs: unzip, unsquashfs (squashfs-tools), debugfs (e2fsprogs), python3, curl.
+# Needs: unzip, python3, curl.
 set -euo pipefail
 
 case "$(uname -s)" in
@@ -35,7 +36,6 @@ PASS='U2FsdGVkX1+lG6cHmshPLI/LaQr9cZCjA8HZt6Y8qmbB7riY'
 declare -A PIN=(
   [boot.img]=2da14364feb97e870613c1cbd77d7a7b372727f33c139d81bab0f8b388209f11
   [oem.img]=f551a5649357024037e3916c1ee19d03995dccdb41ed71708ad75c5cf6e8879f
-  [system.img]=8a7d0e6cf49d4b77f38c96bebeb60feb0cfbdbefae6a1a4a7b99a0cbabc5aa7c
   [firmware_v1.4.3_20260303.bin]=ddca449586e15f08e59f8af3a409ac5a90500a93f9cede5d0dd692145c8e5367
 )
 
@@ -51,17 +51,12 @@ echo "$SWU_SHA256  $SWU" | sha256sum -c --quiet || { echo "$SWU is not the offic
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 unzip -q -P "$PASS" -p "$SWU" update_swu/setup.tar.gz > "$W/setup.tar.gz"
 tar -xzf "$W/setup.tar.gz" -C "$W" ./update_ota.tar ./firmware_v1.4.3_20260303.bin
-tar -xf "$W/update_ota.tar" -C "$W" boot.img oem.img system.img ac_lib.img
+tar -xf "$W/update_ota.tar" -C "$W" boot.img oem.img
 for f in "${!PIN[@]}"; do
   echo "${PIN[$f]}  $W/$f" | sha256sum -c --quiet || { echo "unexpected $f in $SWU_NAME"; exit 1; }
   cp "$W/$f" "$OUT/$f"
 done
 
-mkdir -p "$OUT/rtlbt"
-for f in rtl8723d_fw rtl8723d_config; do
-  debugfs -R "dump /lib/firmware/rtlbt/$f $OUT/rtlbt/$f" "$W/ac_lib.img" >/dev/null 2>&1
-  [ -s "$OUT/rtlbt/$f" ] || { echo "no /lib/firmware/rtlbt/$f in ac_lib.img"; exit 1; }
-done
 python3 -I "$ROOT/tools/mcu_dict.py" "$OUT/firmware_v1.4.3_20260303.bin" "$OUT/firmware_v1.4.3.dict"
-(cd "$OUT" && sha256sum boot.img oem.img system.img rtlbt/* firmware_v1.4.3* > SHA256SUMS)
+(cd "$OUT" && sha256sum boot.img oem.img firmware_v1.4.3* > SHA256SUMS)
 echo "done: $OUT"

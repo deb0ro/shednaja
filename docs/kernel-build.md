@@ -11,7 +11,7 @@ eMMC, USB and the MCU UARTs work with it. How it was derived and tested:
 ```bash
 bash tools/fetch_stock.sh             # once: build/stock/boot.img is the FIT template
 bash tools/build_kernel.sh            # -> build/kernel/
-bash tools/build_oem_ours.sh          # -> build/kernel/oem_ours.img (needs build/kernel/oem-ko/)
+bash tools/build_oem_ours.sh          # optional, development: stock oem + our modules -> build/kernel/oem_ours.img
 ```
 
 - Linux or WSL2 (from Git Bash the script re-runs itself in WSL). The first run clones the
@@ -45,7 +45,7 @@ bash tools/build_oem_ours.sh          # -> build/kernel/oem_ours.img (needs buil
 | `zImage`, `rv1106g-kobra-s1.dtb`, `System.map`, `config`, `kobra_s1_defconfig` | kernel artifacts (the config is also in `/proc/config.gz`) |
 | `modules-5.10.160.tar.gz`, `modules.txt` | `lib/modules/5.10.160` for the rootfs; `RTL8723DS.ko` and `hci_uart.ko` in `extra/` |
 | `oem-ko/` | `RTL8723DS.ko`, `hci_uart.ko`, `cfg80211.ko`, laid out like stock `/oem/usr/ko/` |
-| `oem_ours.img` | stock oem squashfs with those three modules replaced (`tools/build_oem_ours.sh`) |
+| `oem_ours.img` | development only: stock oem squashfs with those three modules replaced (`tools/build_oem_ours.sh`). ShedNaja does not use `/oem`, so releases do not install an oem image |
 | `dtb_vs_stock.diff` | normalized DTB diff against stock (only when `analysis/boot_fdt.bin` exists) |
 
 ## Boot image format

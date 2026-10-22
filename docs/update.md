@@ -32,11 +32,13 @@ reserved and refuses for now).
 manifest       format=1, build_id=..., created=..., one line per image:
                image <boot|oem|system> <file> <size> <sha256>
 boot.img       build/kernel/boot.img        -> boot_<slot>   (16 MiB)
-oem.img        build/kernel/oem_ours.img    -> oem_<slot>    (64 MiB)
 system.img     build/rootfs/rootfs.squashfs -> system_<slot> (48 MiB)
 ```
 
-`--boot/--oem/--system FILE` pack only some images. Partitions that already hold exactly the
+No oem image by default: ShedNaja does not use the oem partition, and the stock oem in
+the slot stays untouched (`--oem build/kernel/oem_ours.img` adds one for development; it is
+Anycubic/Rockchip userspace and must not go into a release). `--boot/--oem/--system FILE`
+pack only some images. Partitions that already hold exactly the
 bundle's image are skipped on the printer, so a full bundle is fine even when only the
 rootfs changed.
 
@@ -63,9 +65,9 @@ bundles the last one by name is used.
 docs/history/test-board-access.md). Copy the `aGVscF9zb3Nf` folder to the root of a FAT32 stick and
 plug it into the printer running stock. The stock `channel.sh` unpacks it to
 `/useremain/update_swu` and runs `swu/shednaja_install/update.sh`, which requires a complete
-bundle (boot, oem and system, so a first install never leaves a mix of stock and ShedNaja;
-`tools/make_install_swu.sh` refuses partial bundles too), checks the images
-(md5, stock busybox has no sha256sum), writes the ones that differ into boot/oem/system of
+bundle (boot and system, so a first install never leaves a mix of stock and ShedNaja;
+`tools/make_install_swu.sh` refuses partial bundles too; oem only if the bundle has one),
+checks the images (md5, stock busybox has no sha256sum), writes the ones that differ into the partitions of
 the slot stock is not running from (`root=` p8 → slot B, p9 → slot A) with readback,
 writes `installed.manifest`, switches to that slot with `rk_ota --misc=other --mode=retry`
 and reboots. The stock slot and /userdata are not written; on any

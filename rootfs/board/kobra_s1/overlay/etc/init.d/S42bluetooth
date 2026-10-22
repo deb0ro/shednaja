@@ -3,8 +3,52 @@
 # RTL8723DS Bluetooth exactly like stock S98_bluetooth_connect: power-cycle via
 # rfkill + bluesleep, load the Realtek vendor hci_uart, attach H5 on UART1.
 # rtk_hciattach downloads /lib/firmware/rtlbt/rtl8723d_fw + rtl8723d_config.
+# /lib/firmware/rtlbt -> /run/rtlbt -> the printer's own stock firmware, copied once from
+# the stock ac_lib partition to /userdata/shednaja/rtlbt (the image does not ship Anycubic's
+# files), else Realtek's public copy in the image, whose config lacks two board entries.
+
+FW=/userdata/shednaja/rtlbt
+FALLBACK=/usr/share/shednaja/rtlbt-fallback
+
+fw_ok() { [ -s "$1/rtl8723d_fw" ] && [ -s "$1/rtl8723d_config" ]; }
+
+# read-only, no journal replay: the stock partition is never written
+from_stock() {
+	mountpoint -q /userdata || return 1
+	cur=$(/usr/libexec/kobra/current-slot)
+	mnt=/run/aclib.$$
+	for s in $([ "$cur" = a ] && echo b a || echo a b); do
+		dev=/dev/block/by-name/ac_lib_$s
+		[ -e "$dev" ] || continue
+		mkdir -p $mnt
+		if mount -t ext4 -o ro,noload "$dev" $mnt 2>/dev/null; then
+			if fw_ok $mnt/lib/firmware/rtlbt; then
+				rm -rf $FW.new && mkdir -p $FW.new &&
+				cp $mnt/lib/firmware/rtlbt/rtl8723d_fw $mnt/lib/firmware/rtlbt/rtl8723d_config $FW.new/ &&
+				sync && rm -rf $FW && mv $FW.new $FW && sync
+			fi
+			umount $mnt
+		fi
+		rmdir $mnt 2>/dev/null
+		if fw_ok $FW; then
+			echo "bluetooth: stock firmware copied from ac_lib_$s" > /dev/kmsg
+			return 0
+		fi
+	done
+	return 1
+}
+
+firmware() {
+	if fw_ok $FW || from_stock; then
+		ln -sfn $FW /run/rtlbt
+	else
+		echo "bluetooth: no stock firmware found, using Realtek's from the image" > /dev/kmsg
+		ln -sfn $FALLBACK /run/rtlbt
+	fi
+}
 
 start() {
+	firmware
 	rf=""
 	for t in /sys/class/rfkill/rfkill*/type; do
 		[ "$(cat "$t" 2>/dev/null)" = bluetooth ] && rf=${t%/type}

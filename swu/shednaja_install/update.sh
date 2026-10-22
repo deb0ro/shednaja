@@ -1,13 +1,15 @@
 #!/bin/sh
 # ShedNaja installer, run by the stock USB updater (/userdata/channel.sh) as root on
 # the stock firmware. Stock may run from slot A or B (an official update moves it to the
-# other slot), so the bundled boot/oem/system images go into the slot stock is NOT running
+# other slot), so the bundled boot/system images go into the slot stock is NOT running
 # from; each one is verified by reading it back, then that slot becomes the boot slot and
 # the printer reboots into it. The running stock slot and /userdata are never written.
 # Images already in the target slot are not written again, so the same stick also
 # switches back to ShedNaja after REBOOT_TO_STOCK.
-# A first install needs the complete system: the bundle must hold boot, oem and system
-# (a partial update bundle would leave a mix of stock and ShedNaja in the target slot).
+# A first install needs the complete system: the bundle must hold boot and system (a
+# partial update bundle would leave a mix of stock and ShedNaja in the target slot). The
+# oem partition is not needed by ShedNaja and stays as stock left it, unless a (development)
+# bundle carries an oem image.
 # Log: shednaja-install.log on the USB stick.
 # Beeps: 1 short = started, 3 long = done (rebooting), 5 short = error (nothing switched).
 
@@ -67,8 +69,8 @@ while read -r kind part file size sum extra; do
         WRITE="$WRITE $part:$file:$size:$md5"
     fi
 done < "$HERE/manifest"
-for part in boot oem system; do
-    case " $SEEN " in *" $part "*) ;; *) fail "incomplete bundle: no $part image (a first install needs boot, oem and system)" ;; esac
+for part in boot system; do
+    case " $SEEN " in *" $part "*) ;; *) fail "incomplete bundle: no $part image (a first install needs boot and system)" ;; esac
 done
 
 for item in $WRITE; do

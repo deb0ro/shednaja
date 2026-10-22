@@ -9,7 +9,7 @@ all the test results: [history/rootfs-build-log.md](history/rootfs-build-log.md)
 ## Build
 
 ```bash
-bash tools/fetch_stock.sh             # once: stock files from the official update -> build/stock/
+bash tools/fetch_stock.sh             # once: stock boot image layout (kernel) and MCU dictionary (offline check)
 bash tools/build_kernel.sh            # build/kernel/ (modules for the rootfs)
 bash tools/build_rootfs.sh            # -> build/rootfs/rootfs.squashfs
 bash rootfs/tests/offline_check.sh    # optional, see "Offline checks"
@@ -39,8 +39,8 @@ bash rootfs/tests/offline_check.sh    # optional, see "Offline checks"
 | Our tree | `rootfs/` = BR2_EXTERNAL `KOBRA`: `configs/kobra_s1_defconfig`, `board/kobra_s1/` (overlay, `post-build.sh`, `post-fakeroot.sh`, `busybox.fragment`, default printer config), `package/*` |
 | Kernel modules | `build/kernel/modules-5.10.160.tar.gz` (ours) → `/lib/modules/5.10.160` |
 | rtk_hciattach | `radxa/rkwifibt` @ `b61a1e84`, `tools/rtk_hciattach` |
-| BT firmware | stock `rtl8723d_fw` + `rtl8723d_config` from `ac_lib.img` of the official update (`build/stock/rtlbt/`). The radxa copies differ (older firmware, config without two board entries) and are only a fallback with a warning |
-| Root password hash | stock, from `etc/shadow` of `build/stock/system.img` (default password `rockchip`) |
+| BT firmware | Realtek's `rtl8723d_fw` + `rtl8723d_config` from `radxa/rkwifibt`, as a fallback in `/usr/share/shednaja/rtlbt-fallback`. `/lib/firmware/rtlbt` → `/run/rtlbt`: `S42bluetooth` copies the printer's own stock files once from its stock `ac_lib` partition (mounted `ro,noload`) to `/userdata/shednaja/rtlbt` and uses them; the radxa config lacks two board entries (0x008d/0x008f) |
+| Root password hash | generated: `openssl passwd -1 -salt shednaja rockchip` (default password `rockchip`, as on stock) |
 
 ## Packages and versions
 
@@ -71,7 +71,7 @@ mpp…), rk_ota.
 | `S27kobra-usbupdate` | update bundle from a USB stick ([update.md](update.md)) |
 | `S30kobra-modules` | `cfg80211`, `RTL8723DS` (Wi-Fi power saving off: `/etc/modprobe.d/kobra-wifi.conf`) |
 | `S41wifi` | `wpa_supplicant` with the **stock** `/userdata/wifi_cfg/wpa_supplicant.conf`, `udhcpc` |
-| `S42bluetooth` | power cycle, `hci_uart`, `rtk_hciattach` → `hci0` (no bluez tools) |
+| `S42bluetooth` | firmware link (the printer's stock files, copied once from `ac_lib`, else the fallback), power cycle, `hci_uart`, `rtk_hciattach` → `hci0` (no bluez tools) |
 | `S48ntpd` | waits for DNS, sets the clock once, then busybox ntpd |
 | `S50dropbear` | SSH; host keys in `/userdata/shednaja/dropbear` |
 | `S59klipper-mcu` | Klipper Linux MCU (`/tmp/klipper_host_mcu`) |
@@ -93,7 +93,7 @@ Getty on the serial console `ttyFIQ0` (J1, 115200). All services run as root, li
 | `/useremain/shednaja/printer_data/{config,logs,gcodes,database,comms}` | the live `printer_data`. `printer-data-init` copies **missing** default files on boot and never overwrites existing ones, so a new image does not change an existing config (see TODO). `/root/printer_data` links here |
 | `/useremain/shednaja/helixscreen` | HelixScreen settings (touch calibration, wizard state) |
 | `/useremain/shednaja/update` | update bundles, logs, lock |
-| `/userdata/shednaja/` | SSH host keys, `ssh/authorized_keys`, `shadow` (root password), random seed |
+| `/userdata/shednaja/` | SSH host keys, `ssh/authorized_keys`, `shadow` (root password), `rtlbt/` (the printer's BT firmware), random seed |
 | `/userdata/wifi_cfg/wpa_supplicant.conf` | the stock Wi-Fi config, shared with stock |
 | `/userdata/app/gk` | the stock GoKlipper tree: **never touched** |
 
