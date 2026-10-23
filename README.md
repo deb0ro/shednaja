@@ -89,9 +89,10 @@ ShedNaja never changes the stock slot, so stock keeps working as before.
 ShedNaja assumes a trusted home network, like a usual Klipper setup:
 - Mainsail / Moonraker (ports 80 and 7125) have no login. Every client from a private
   address range (`10.x`, `172.16-31.x`, `192.168.x`, link-local) has full control:
-  printing, macros, config files, reboot. Moonraker runs as root. Do not expose the
-  printer to the internet or to a guest network; limit `trusted_clients` in
-  `moonraker.conf` if your network is shared.
+  printing, macros, config files, reboot. Klipper and Moonraker run as root and their
+  config files are editable over the web, so treat web access as close to root access.
+  Do not expose the printer to the internet or to a guest network; limit
+  `trusted_clients` in `moonraker.conf` if your network is shared.
 - SSH accepts root with a password; with the default password anyone on the network is
   root on the printer.
 - Update bundles and the installer are not signed. Whoever can plug in a USB stick or log

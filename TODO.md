@@ -18,6 +18,9 @@
 
 ## Open items
 
+- Run Klipper and Moonraker as an unprivileged user: both run as root, and their configs
+  are editable over the web without a login (README "Security").
+
 - Config on installed printers: test `kobra-config-migrate` on the development printer
   (its copies may predate the public history and then count as edited: `--force`), and
   check Mainsail with the read-only `config/shednaja/` link.
