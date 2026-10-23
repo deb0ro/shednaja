@@ -33,3 +33,6 @@ jobs:
 
       - name: kobra_plr
         run: python3 -m unittest discover -s rootfs/tests -p 'test_*.py' -v
+
+      - name: kobra-config-migrate
+        run: bash rootfs/tests/test_config_migrate.sh

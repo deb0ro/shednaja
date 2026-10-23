@@ -147,9 +147,7 @@ same after a confirmation dialog; it is refused while a print is running or paus
 the reboot it resets the MCUs like `FIRMWARE_RESTART`: after a plain warm reboot stock
 stopped with error 11407 (printhead board did not start) until the printer was
 power-cycled, because the MCUs were still running in the state Klipper left them in.
-`printer.kobra_slot.slot` reports the running slot. `printer-data-init` only installs
-missing config files, so a printer set up before this needs `[kobra_slot]` and the macro
-added by hand.
+`printer.kobra_slot.slot` reports the running slot.
 
 ## If ShedNaja does not start
 

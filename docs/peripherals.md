@@ -110,11 +110,22 @@ G-code fails at its first `T<n>` (unknown command); single-filament prints do no
 
 ## Existing printers
 
-`printer-data-init` copies only default files that do not exist yet, so on a printer that
-was set up with an older image new default files appear, but changes to existing ones
-(`printer.cfg`, `moonraker.conf`, `kobra_*.cfg`) do not. Compare with
-`/usr/share/shednaja/printer_data/config/` and merge by hand (TODO: split shipped and user
-config).
+The Klipper config ShedNaja maintains (`kobra_s1.cfg`, `kobra_macros.cfg`,
+`kobra_peripherals.cfg`, `mainsail.cfg`) comes with the image in `/usr/share/shednaja/klipper`
+(read-only, shown in Mainsail as `config/shednaja/`), and `printer.cfg` includes it from there,
+so updates bring its fixes. To change something, override it in `printer.cfg` below the
+includes. `printer.cfg`, `moonraker.conf` and `webcam.conf` are the owner's: copied once,
+never overwritten; compare them with `/usr/share/shednaja/printer_data/config/` after an
+update.
+
+Images before this copied the four files into `printer_data/config` and included them by
+name. At every boot `kobra-config-migrate --auto` (from `printer-data-init`) switches each
+include whose copy is unmodified (its sha256 is one a ShedNaja image shipped,
+`rootfs/board/kobra_s1/klipper_config/known-versions.sha256`) to the image's file and moves
+the copy and the old `printer.cfg` into `config/backup-<time>/`. A copy you edited stays in
+use without updates (the kernel log says so): move your changes into `printer.cfg`, then
+run `kobra-config-migrate --force` over SSH. Copies from development builds before the
+public history are not in the list and count as edited.
 
 ## Not done
 

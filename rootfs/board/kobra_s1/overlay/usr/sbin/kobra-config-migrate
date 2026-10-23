@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# kobra-config-migrate - move printer_data/config from the old layout to the shipped one.
+#
+#   kobra-config-migrate [--force] [--auto]
+#
+# Old images copied kobra_s1.cfg, kobra_macros.cfg, kobra_peripherals.cfg and mainsail.cfg
+# into printer_data/config, where updates never reached them. Now printer.cfg includes
+# them from the image (/usr/share/shednaja/klipper, read-only). For each of these files
+# that printer.cfg still includes by its bare name:
+#   - the copy is unmodified (its sha256 is one that an image shipped,
+#     klipper-known-versions.sha256) or missing: the include points at the image's file
+#     and the copy moves into config/backup-<time>/
+#   - the copy was edited: it stays and is still included (without updates); --force
+#     switches it too (the copy goes to the backup, re-add your changes to printer.cfg)
+# printer.cfg is saved to the backup before it is changed. --auto: run by
+# printer-data-init at every boot, quiet when there is nothing to do, messages to the
+# kernel log. KOBRA_PD / KOBRA_SHIP / KOBRA_KNOWN override the paths (tests).
+
+PD=${KOBRA_PD:-/useremain/shednaja/printer_data}
+SHIP=${KOBRA_SHIP:-/usr/share/shednaja/klipper}
+KNOWN=${KOBRA_KNOWN:-/usr/share/shednaja/klipper-known-versions.sha256}
+FILES="mainsail.cfg kobra_s1.cfg kobra_macros.cfg kobra_peripherals.cfg"
+CFG=$PD/config
+P=$CFG/printer.cfg
+FORCE=0 AUTO=0
+for a in "$@"; do
+	case "$a" in
+		--force) FORCE=1 ;;
+		--auto) AUTO=1 ;;
+		-h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+		*) echo "usage: kobra-config-migrate [--force] [--auto]" >&2; exit 2 ;;
+	esac
+done
+msg() {
+	if [ $AUTO = 1 ]; then echo "kobra-config-migrate: $*" > /dev/kmsg 2>/dev/null || echo "kobra-config-migrate: $*"
+	else echo "$*"; fi
+}
+# "[include kobra_s1.cfg]", any spacing; the dot is literal
+bare_include() { grep -qE "^[[:space:]]*\[include[[:space:]]+$(echo "$1" | sed 's/\./\\./g')[[:space:]]*\]" "$P"; }
+
+[ -f "$P" ] || exit 0
+MOVE="" KEPT=""
+for f in $FILES; do
+	bare_include "$f" || continue
+	[ -f "$SHIP/$f" ] || { msg "$f: not in $SHIP, include left as it is"; continue; }
+	if [ ! -f "$CFG/$f" ] || [ $FORCE = 1 ]; then
+		MOVE="$MOVE $f"
+	elif grep -qxF "$(sha256sum "$CFG/$f" | cut -d' ' -f1)  $f" "$KNOWN" 2>/dev/null; then
+		MOVE="$MOVE $f"
+	else
+		KEPT="$KEPT $f"
+	fi
+done
+[ -n "$MOVE" ] || [ -n "$KEPT" ] || { [ $AUTO = 1 ] || msg "nothing to migrate: printer.cfg already uses the shipped files"; exit 0; }
+
+if [ -n "$MOVE" ]; then
+	BK=$CFG/backup-$(date +%Y%m%d-%H%M%S)
+	[ -e "$BK" ] && BK=$BK-$$
+	mkdir -p "$BK" && cp -p "$P" "$BK/printer.cfg" || { msg "cannot back up printer.cfg, nothing changed"; exit 1; }
+	cp -p "$P" "$P.migrate"
+	for f in $MOVE; do
+		e=$(echo "$f" | sed 's/\./\\./g')
+		sed -i -E "s|^([[:space:]]*)\[include[[:space:]]+${e}[[:space:]]*\]|\1[include $SHIP/$f]|" "$P.migrate"
+	done
+	mv "$P.migrate" "$P" || { rm -f "$P.migrate"; msg "cannot write printer.cfg, nothing changed"; exit 1; }
+	for f in $MOVE; do
+		[ -f "$CFG/$f" ] && mv "$CFG/$f" "$BK/"
+	done
+	sync
+	msg "now from the image:$MOVE (old copies and printer.cfg saved in config/$(basename "$BK"))"
+fi
+if [ -n "$KEPT" ]; then
+	msg "kept, edited by you:$KEPT - they get no updates; compare with config/shednaja/, move your changes to printer.cfg and run kobra-config-migrate --force"
+fi
+exit 0

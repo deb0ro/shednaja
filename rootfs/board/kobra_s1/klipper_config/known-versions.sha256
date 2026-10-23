@@ -1,0 +1,12 @@
+# sha256 of every version of the shipped Klipper config files an image has carried
+# (rootfs/board/kobra_s1/klipper_config, mainsail.cfg from mainsail-config). An old copy
+# in printer_data/config with one of these sums is unmodified, so kobra-config-migrate can
+# replace it with the image's file. Add the new sum whenever one of the files changes
+# (CI checks that the current ones are listed); never remove a line.
+667db0db726cb783f83ad7ebc83416345e3b6b0293c69922621c091c38e76149  kobra_s1.cfg
+1b90d243e0bcf331e8c538ab985c56633e9378660c7e5c10eaea23d643158e6e  kobra_macros.cfg
+db529220c22160b952e5a047b59f3fd862a19e20b7b422b6b5e8f1925a168402  kobra_macros.cfg
+2ff85ffd008ad308fbc138efa9e02147d8df66c0e41ba6a70893ed5ebbd5612a  kobra_macros.cfg
+280bf1ed29a990bf0943f12732fdee317b4b503a74191984ca491ae5d18b1354  kobra_peripherals.cfg
+c1d486b93fa402a615acf8da7e56bf49693c859bfbce80495cd04c4150a23056  kobra_peripherals.cfg
+66de7aa5c3ae54d6c98ae1bffc98cbcf1086464d435cf36ccc877d01a862d58b  mainsail.cfg

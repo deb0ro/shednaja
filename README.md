@@ -62,7 +62,8 @@ stock stays in one, ShedNaja goes into the other, and you can switch between the
 4. Open `http://<printer IP>/` for Mainsail. HelixScreen comes up on the display.
 
 The first boot puts a default Klipper configuration into
-`/useremain/shednaja/printer_data/config/`. Calibrate before you print: `PROBE_CALIBRATE`
+`/useremain/shednaja/printer_data/config/`: `printer.cfg` is yours, the hardware and macro
+files it includes come with ShedNaja and are updated with it (`config/shednaja/`, read-only). Calibrate before you print: `PROBE_CALIBRATE`
 (Z offset), `PID_CALIBRATE`, `SHAPER_CALIBRATE`.
 
 ## Going back to stock, and back again

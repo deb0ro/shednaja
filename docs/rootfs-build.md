@@ -92,8 +92,9 @@ Getty on the serial console `ttyFIQ0` (J1, 115200). All services run as root, li
 | Path | What |
 |---|---|
 | `/usr/lib/klipper/klippy`, `/usr/lib/moonraker`, `/usr/share/mainsail`, `/opt/helixscreen` | code, read-only |
-| `/usr/share/shednaja/printer_data/config` | default config: `printer.cfg`, `kobra_s1.cfg` (hardware), `kobra_macros.cfg`, `kobra_peripherals.cfg`, `mainsail.cfg`, `moonraker.conf`, `webcam.conf`, ACEPRO's `ace_KS1.cfg` / `ace_macros_generic.cfg` |
-| `/useremain/shednaja/printer_data/{config,logs,gcodes,database,comms}` | the live `printer_data`. `printer-data-init` copies **missing** default files on boot and never overwrites existing ones, so a new image does not change an existing config (see TODO). `/root/printer_data` links here |
+| `/usr/share/shednaja/klipper` | the Klipper config ShedNaja maintains: `kobra_s1.cfg` (hardware), `kobra_macros.cfg`, `kobra_peripherals.cfg`, `mainsail.cfg`. Read-only and updated with the image; `printer.cfg` includes it from here, Mainsail shows it as `config/shednaja/` |
+| `/usr/share/shednaja/printer_data/config` | the owner's starting config, copied once: `printer.cfg`, `moonraker.conf`, `webcam.conf`, ACEPRO's `ace_KS1.cfg` / `ace_macros_generic.cfg` |
+| `/useremain/shednaja/printer_data/{config,logs,gcodes,database,comms}` | the live `printer_data`. `printer-data-init` copies **missing** default files on boot and never overwrites existing ones; `kobra-config-migrate --auto` moves configs of older images to the shipped files (see [peripherals.md](peripherals.md#existing-printers)). `/root/printer_data` links here |
 | `/useremain/shednaja/helixscreen` | HelixScreen settings (touch calibration, wizard state) |
 | `/useremain/shednaja/update` | update bundles, logs, lock |
 | `/userdata/shednaja/` | SSH host keys, `ssh/authorized_keys`, `shadow` (root password), `rtlbt/` (the printer's BT firmware), random seed |
@@ -107,7 +108,9 @@ of the image's file on every boot (busybox `passwd` rewrites it too).
 
 ## Klipper configuration
 
-- `printer.cfg`: includes, MCU ports (`[mcu]` `/dev/ttyS3`, `[mcu nozzle_mcu]` `/dev/ttyS5`,
+Shipped (`rootfs/board/kobra_s1/klipper_config`, installed to `/usr/share/shednaja/klipper`)
+and the owner's (`printer_data_defaults/config`):
+- `printer.cfg`: includes of the shipped files, MCU ports (`[mcu]` `/dev/ttyS3`, `[mcu nozzle_mcu]` `/dev/ttyS5`,
   576000 Bd, `restart_method: command`), and every value `SAVE_CONFIG` may change (PID,
   input shaper, probe `z_offset`). Klipper refuses to autosave an option that an included
   file also sets, so those live only here.

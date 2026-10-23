@@ -18,9 +18,9 @@
 
 ## Open items
 
-- Config files on installed printers: `printer-data-init` only adds missing files, so new
-  sections in `kobra_*.cfg` (e.g. `[kobra_slot]`) do not reach printers that are already
-  set up. Split shipped config (read-only, updated with the image) from user config.
+- Config on installed printers: test `kobra-config-migrate` on the development printer
+  (its copies may predate the public history and then count as edited: `--force`), and
+  check Mainsail with the read-only `config/shednaja/` link.
 - Maskrom: test whether SW1 on the upper board pulls SARADC_IN0 low (read
   `in_voltage0_raw` while pressing it), find the RV1106 USB OTG lines (the SoC USB goes
   through the GL850G hub; "USB" test pads on the back of the upper board).

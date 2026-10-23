@@ -27,7 +27,9 @@ fi
 HOSTDICT=$(ls -d "$T"/../build/klipper-host-mcu-*/out/klipper.dict 2>/dev/null | head -n 1)
 pd=$W/printer_data; mkdir -p $pd/logs $pd/gcodes $pd/database
 cp -a "$T/usr/share/shednaja/printer_data/config" $pd/
-sed -i "s|/useremain/shednaja/printer_data|$pd|" $pd/config/printer.cfg
+# printer.cfg includes the shipped files from the image: point it at the target dir's copy
+sed -i -e "s|/useremain/shednaja/printer_data|$pd|" -e "s|/usr/share/shednaja/klipper/|$T/usr/share/shednaja/klipper/|" \
+	$pd/config/printer.cfg
 
 echo "== 1. klippy batch config check"
 printf 'G28 X Y\nG1 X100 Y100 F6000\nM104 S0\nM140 S0\nM106 S128\nM106 P2 S100\nM107\nM107 P2\nQUERY_ENDSTOPS\n' > $W/test.gcode

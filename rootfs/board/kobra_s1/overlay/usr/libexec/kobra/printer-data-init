@@ -1,7 +1,9 @@
 #!/bin/sh
 #
 # Create the writable printer_data tree on /useremain on first boot and copy the
-# default configs - only files that do not exist yet, user edits are never touched.
+# default configs (printer.cfg, moonraker.conf, webcam.conf) - only files that do not
+# exist yet, user edits are never touched. The Klipper config ShedNaja maintains is not
+# copied: printer.cfg includes it from the image (/usr/share/shednaja/klipper).
 # Never touches the stock /userdata/app/gk tree.
 
 PD=/useremain/shednaja/printer_data
@@ -23,4 +25,12 @@ for f in $(cd $DEFAULTS && find . -type f); do
 		echo "printer-data-init: installed default $f" > /dev/kmsg
 	fi
 done
+# The shipped Klipper config (read-only, updated with the image) that printer.cfg
+# includes, visible in Mainsail as config/shednaja/; a file or directory of that name
+# made by the owner is left alone.
+if [ ! -e $PD/config/shednaja ] || [ -L $PD/config/shednaja ]; then
+	ln -sfn /usr/share/shednaja/klipper $PD/config/shednaja
+fi
+# configs set up by older images: include the shipped files instead of unmodified copies
+/usr/sbin/kobra-config-migrate --auto
 exit 0
