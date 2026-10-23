@@ -2,7 +2,7 @@
 #
 # Printer camera: mjpg-streamer on 127.0.0.1:8080, served by lighttpd as /webcam/
 # (/webcam/?action=stream, /webcam/?action=snapshot). Settings in
-# printer_data/config/webcam.conf (shell syntax, editable in Mainsail).
+# printer_data/config/webcam.conf (KEY=value lines, editable in Mainsail).
 # The camera sits behind the GL850G hub, which S25kobra-usb switches on; it takes
 # a second or two to enumerate, so wait for the device node.
 
@@ -15,7 +15,33 @@ WEBCAM_DEVICE=/dev/video0
 WEBCAM_RESOLUTION=1280x720
 WEBCAM_FPS=15
 WEBCAM_OPTIONS=""
-[ -f $CONF ] && . $CONF
+
+# webcam.conf can be edited by anyone with access to Mainsail, and this script runs as root:
+# read it as data (KEY=value lines), never source it. A value that does not fit its key
+# is ignored with a warning and the default stays.
+read_conf() {
+	[ -f "$CONF" ] || return 0
+	while IFS='=' read -r k v || [ -n "$k" ]; do
+		k=$(echo "$k" | tr -d ' \t')
+		v=$(echo "$v" | tr -d '\r')
+		case "$v" in \"*\") v=${v#\"}; v=${v%\"} ;; \'*\') v=${v#\'}; v=${v%\'} ;; esac
+		ok=1
+		case "$k" in
+		''|\#*) continue ;;
+		WEBCAM_ENABLE) case "$v" in 0|1) WEBCAM_ENABLE=$v ;; *) ok=0 ;; esac ;;
+		WEBCAM_DEVICE) case "$v" in /dev/video[0-9]|/dev/video[0-9][0-9]) WEBCAM_DEVICE=$v ;; *) ok=0 ;; esac ;;
+		WEBCAM_RESOLUTION)
+			case "$v" in [1-9]*x[1-9]*) ;; *) ok=0 ;; esac
+			case "$v" in *[!0-9x]*|*x*x*) ok=0 ;; esac
+			[ $ok = 1 ] && WEBCAM_RESOLUTION=$v ;;
+		WEBCAM_FPS) case "$v" in ''|*[!0-9]*) ok=0 ;; *) WEBCAM_FPS=$v ;; esac ;;
+		WEBCAM_OPTIONS) case "$v" in *[!A-Za-z0-9\ ._-]*) ok=0 ;; *) WEBCAM_OPTIONS=$v ;; esac ;;
+		*) ok=0 ;;
+		esac
+		[ $ok = 1 ] || echo "webcam: ignoring '$k' in $CONF (not a known key or value)" > /dev/kmsg
+	done < "$CONF"
+}
+read_conf
 
 start() {
 	[ "$WEBCAM_ENABLE" = 1 ] || return 0
