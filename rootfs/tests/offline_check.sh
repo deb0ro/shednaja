@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # Offline checks of the built rootfs (Buildroot target dir) under qemu-arm-static, no board:
 #  1. klippy loads the default printer.cfg in batch mode (-o/-d) against the MCU data
-#     dictionaries of the fork firmware (main: build/mcu/klipper.dict v2.0.11 - same
-#     command set as the v2.0.12 on the board, as far as we know; nozzle:
-#     build/mcu/cs1237/klipper.dict v2.0.13-cali; host: the klipper_mcu build) and runs a
-#     few G-codes.
+#     dictionaries (both MCUs: the Anycubic firmware v1.4.3 from build/stock, see below;
+#     host: the klipper_mcu build) and runs a few G-codes.
 #  2. Moonraker imports, starts with the default moonraker.conf and answers
 #     /server/info on 127.0.0.1:7125 (no klippy connected).
 #  3. lighttpd accepts /etc/lighttpd/lighttpd.conf (-tt).
