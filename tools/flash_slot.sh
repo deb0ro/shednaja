@@ -6,10 +6,10 @@
 #   bash tools/flash_slot.sh <ip> <boot.img|-> [oem.img] [--system rootfs.squashfs]           # dry run
 #   bash tools/flash_slot.sh <ip> <boot.img|-> [oem.img] [--system rootfs.squashfs] --write   # write
 #
-# "-" as boot image skips boot_<slot>. The slot switch uses rk_ota on the stock rootfs and
-# kobra-abctl on ours (identical misc changes, see docs/rootfs-build.md).
+# "-" as boot image skips boot_<slot>. The slot switch uses the stock rk_ota.
 #
-# Refuses to touch the slot the board is currently running from. Before writing it saves
+# Development tool from before the installer: runs only against the stock firmware, and
+# refuses to touch the slot the board is currently running from. Before writing it saves
 # the current contents of the target partitions to dumps/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -32,13 +32,15 @@ case "$root" in
   *) echo "unknown root partition p$root - aborting"; exit 1 ;;
 esac
 echo "running slot: $cur (root=p$root) -> target slot: $tgt"
-if "${SSH[@]}" 'command -v rk_ota' >/dev/null 2>&1; then
-    AB_SHOW="rk_ota --misc=display 2>&1 | grep -E 'priority|tries|successful'"
-    AB_OTHER="rk_ota --misc=other --mode=retry 2>&1 | grep -E 'A/B'"
-else
-    AB_SHOW="kobra-abctl display"
-    AB_OTHER="kobra-abctl other"
+# Only from the stock firmware (SSH via Rinkhals): on a board running ShedNaja the inactive
+# slot holds stock, which this would overwrite. ShedNaja updates itself (kobra-update).
+if "${SSH[@]}" 'grep -q "^ID=shednaja" /etc/os-release' 2>/dev/null; then
+    echo "the board runs ShedNaja: its inactive slot is the stock firmware - refusing"
+    echo "(update ShedNaja with kobra-update, see docs/update.md)"; exit 1
 fi
+"${SSH[@]}" 'command -v rk_ota' >/dev/null 2>&1 || { echo "no rk_ota on the board - not the stock firmware, refusing"; exit 1; }
+AB_SHOW="rk_ota --misc=display 2>&1 | grep -E 'priority|tries|successful'"
+AB_OTHER="rk_ota --misc=other --mode=retry 2>&1 | grep -E 'A/B'"
 "${SSH[@]}" "$AB_SHOW" || true
 
 declare -A IMG=()

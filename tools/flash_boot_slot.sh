@@ -5,7 +5,8 @@
 #   bash tools/flash_boot_slot.sh <board-ip> <boot.img>            # dry run: checks only
 #   bash tools/flash_boot_slot.sh <board-ip> <boot.img> --write    # really write + switch slot
 #
-# Refuses to touch the slot the board is currently running from.
+# Development tool from before the installer: runs only against the stock firmware, and
+# refuses to touch the slot the board is currently running from.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 IP="$1"; IMG="$2"; MODE="${3:-}"
@@ -15,6 +16,13 @@ SSH=(ssh -i keys/kobra_ed25519 -o BatchMode=yes -o UserKnownHostsFile=keys/known
 SIZE=$(stat -c %s "$IMG")
 MD5=$(md5sum "$IMG" | cut -d' ' -f1)
 
+# Only from the stock firmware (SSH via Rinkhals): on a board running ShedNaja the inactive
+# slot holds stock, which this would overwrite. ShedNaja updates itself (kobra-update).
+if "${SSH[@]}" 'grep -q "^ID=shednaja" /etc/os-release' 2>/dev/null; then
+    echo "the board runs ShedNaja: its inactive slot is the stock firmware - refusing"
+    echo "(update ShedNaja with kobra-update, see docs/update.md)"; exit 1
+fi
+"${SSH[@]}" 'command -v rk_ota' >/dev/null 2>&1 || { echo "no rk_ota on the board - not the stock firmware, refusing"; exit 1; }
 root=$("${SSH[@]}" 'cat /proc/cmdline' | tr ' ' '\n' | sed -n 's#^root=/dev/mmcblk0p##p')
 case "$root" in
   8) cur=a; other=b ;;
