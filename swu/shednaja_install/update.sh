@@ -103,10 +103,11 @@ cp "$HERE/manifest" /useremain/shednaja/update/installed.manifest
 
 # A/B data in misc (Rockchip AvbABData at offset 2048, see kobra-abctl.c): magic "\0AB0",
 # then priority/tries/successful per slot. Prints "<priority a> <priority b>", or nothing
-# if it cannot be read.
+# if it cannot be read. hexdump, not od: stock's busybox 1.27.2 od has no -A/-t.
 ab_priorities() {
-    dd if=/dev/block/by-name/misc bs=1 skip=2048 count=16 2>/dev/null | od -An -tu1 -v 2>/dev/null |
-        tr -s ' \n' '  ' | awk '$1 == 0 && $2 == 65 && $3 == 66 && $4 == 48 { print $9, $13 }'
+    dd if=/dev/block/by-name/misc bs=1 skip=2048 count=16 2>/dev/null |
+        hexdump -v -e '16/1 "%u " "\n"' 2>/dev/null |
+        awk '$1 == 0 && $2 == 65 && $3 == 66 && $4 == 48 { print $9, $13 }'
 }
 rk_ota --misc=other --mode=retry > /tmp/shednaja-rk_ota.out 2>&1
 rc=$?
@@ -114,7 +115,7 @@ grep -E 'A/B' /tmp/shednaja-rk_ota.out
 rm -f /tmp/shednaja-rk_ota.out
 rk_ota --misc=display 2>&1 | grep -E 'priority|tries|successful'
 # the switch only counts if slot $T now has the highest priority (SPL boots that one);
-# without a readable misc (no od), rk_ota's exit status has to do
+# without a readable misc (no hexdump), rk_ota's exit status has to do
 prio=$(ab_priorities)
 if [ -n "$prio" ]; then
     set -- $prio

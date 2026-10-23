@@ -207,3 +207,12 @@ updates may move it to the other slot (the installer handles either layout).
   up with the default config: Klipper ready, `kobra_slot` A, no config warnings, Mainsail and
   the camera answered, HelixScreen wizard on the display, `passwd` over SSH kept on
   `/userdata`. `REBOOT_TO_STOCK` brought stock back from slot B.
+- 2026-10-23, release `efe6943`, then `e434813` (no oem image, `kobra-abctl --slot`, strict
+  bundle members, login password prompt), over SSH on slot A: bundle members accepted, the
+  stage removed after the handover, `kobra-bootok` re-armed slot A (tries 7), Klipper ready,
+  no failed Moonraker components. With the default hash in place every interactive SSH
+  login asked for a new password, Ctrl-C skipped it, plain SSH commands were not asked.
+  `REBOOT_TO_STOCK` set B 15 / A 14 and stock came up; back with the stick, 1 short and
+  3 long beeps. The `efe6943` installer logged "cannot read the A/B data in misc": stock's
+  busybox 1.27.2 `od` has no `-A`/`-t`, so it went by rk_ota's exit status. `e434813` reads
+  it with `hexdump`, and its slot check ran on stock and passed.
