@@ -4,7 +4,8 @@
 #
 ################################################################################
 
-KOBRA_ACEPRO_VERSION = V0.8.1
+# the commit of tag V0.8.1, pinned by hash: a tag can be moved upstream
+KOBRA_ACEPRO_VERSION = 2d20ef9278055cd08265e2022928f5523fc8a3d0
 KOBRA_ACEPRO_SITE = $(call github,Kobra-S1,ACEPRO,$(KOBRA_ACEPRO_VERSION))
 KOBRA_ACEPRO_LICENSE = GPL-3.0
 KOBRA_ACEPRO_LICENSE_FILES = LICENSE

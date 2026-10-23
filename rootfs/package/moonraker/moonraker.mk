@@ -4,7 +4,9 @@
 #
 ################################################################################
 
-MOONRAKER_VERSION = v0.11.0
+# the commit of tag v0.11.0, pinned by hash: a tag can be moved upstream
+MOONRAKER_RELEASE = v0.11.0
+MOONRAKER_VERSION = 985c1d0bbeb90bc057d34a232c9dc3b05e0c6c8d
 MOONRAKER_SITE = https://github.com/Arksine/moonraker.git
 MOONRAKER_SITE_METHOD = git
 MOONRAKER_LICENSE = GPL-3.0
@@ -15,7 +17,7 @@ define MOONRAKER_INSTALL_TARGET_CMDS
 	rm -rf $(TARGET_DIR)/usr/lib/moonraker
 	mkdir -p $(TARGET_DIR)/usr/lib/moonraker
 	cp -a $(@D)/moonraker $(@D)/LICENSE $(TARGET_DIR)/usr/lib/moonraker/
-	echo "$(MOONRAKER_VERSION)" > $(TARGET_DIR)/usr/lib/moonraker/moonraker/.version
+	echo "$(MOONRAKER_RELEASE)" > $(TARGET_DIR)/usr/lib/moonraker/moonraker/.version
 	find $(TARGET_DIR)/usr/lib/moonraker -name '__pycache__' -prune -exec rm -rf {} +
 	$(HOST_DIR)/bin/python3 -m compileall -q -j1 --invalidation-mode unchecked-hash \
 		-d /usr/lib/moonraker/moonraker $(TARGET_DIR)/usr/lib/moonraker/moonraker

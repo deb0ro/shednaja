@@ -4,7 +4,8 @@
 #
 ################################################################################
 
-MAINSAIL_CONFIG_VERSION = v1.2.1
+# the commit of tag v1.2.1, pinned by hash: a tag can be moved upstream
+MAINSAIL_CONFIG_VERSION = e57810d51b5c634aadaca4db923bfcba269ae4b3
 MAINSAIL_CONFIG_SITE = https://github.com/mainsail-crew/mainsail-config.git
 MAINSAIL_CONFIG_SITE_METHOD = git
 MAINSAIL_CONFIG_LICENSE = GPL-3.0
