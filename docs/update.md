@@ -56,6 +56,12 @@ ssh root@<printer> kobra-update /useremain/shednaja/update/shednaja-update-<id>.
 (`scp -O`: our dropbear has no sftp-server; or `ssh ... 'cat > file' < file`.)
 `kobra-update --check <bundle>` only verifies and lists what it would write.
 
+**After any install or update:** `bash tools/printer_smoke.sh <printer> [build id]` checks
+the printer read-only (build id, A/B priority and re-arm, mounts, Klipper ready, Moonraker
+components, Mainsail, HelixScreen, camera, Wi-Fi, Bluetooth, config layout, default
+password) and exits 1 on a failure; hand tests are then only needed for what the build
+changed.
+
 **From a USB stick:** copy the bundle (name must start with `shednaja-update`, `.tar`)
 into the root folder of a FAT32 or exFAT stick (MBR or GPT; GPT needs a kernel from ae32afc on),
 plug it into the printer, power-cycle.
@@ -229,3 +235,8 @@ updates may move it to the other slot (the installer handles either layout).
   build, `863a946`, reinstalled the copies after migrating and still sourced
   `webcam.conf`); fixed in the list, `post-build.sh` and `build_rootfs.sh`.
   Backup folders are named by the clock at boot, before NTP (`backup-19700101-000017`).
+- 2026-10-27, release `b8a5f28`, the first one built with `CLEAN=1` (no transient retries),
+  over SSH on slot A, again on the 2026-10-22 config plus an empty folder with the old
+  backup name: `tools/printer_smoke.sh` PASS; the migration at boot (clock not set yet)
+  wrote `config/backup-1` and skipped the old-style name, `--force` later (clock set)
+  wrote `backup-2-20261027-074431`.

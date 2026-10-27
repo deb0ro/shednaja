@@ -10,7 +10,7 @@
 # that printer.cfg still includes by its bare name:
 #   - the copy is unmodified (its sha256 is one that an image shipped,
 #     klipper-known-versions.sha256) or missing: the include points at the image's file
-#     and the copy moves into config/backup-<time>/
+#     and the copy moves into config/backup-<n>/ (backup-<n>-<date>-<time> with a set clock)
 #   - the copy was edited: it stays and is still included (without updates); --force
 #     switches it too (the copy goes to the backup, re-add your changes to printer.cfg)
 # printer.cfg is saved to the backup before it is changed. --auto: run by
@@ -55,7 +55,17 @@ done
 [ -n "$MOVE" ] || [ -n "$KEPT" ] || { [ $AUTO = 1 ] || msg "nothing to migrate: printer.cfg already uses the shipped files"; exit 0; }
 
 if [ -n "$MOVE" ]; then
-	BK=$CFG/backup-$(date +%Y%m%d-%H%M%S)
+	# backup-<n>, numbered on from the highest backup-<n> or backup-<n>-<date>-<time>
+	# there; the date only with a set clock (at boot it runs before NTP: 1970)
+	n=0
+	for d in "$CFG"/backup-*; do
+		b=${d##*/backup-}; k=${b%%-*}
+		case "$k" in ''|*[!0-9]*) continue ;; esac
+		case "$b" in "$k"|"$k"-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]) ;; *) continue ;; esac
+		[ ${#k} -le 6 ] && [ "$k" -gt $n ] && n=$k
+	done
+	BK=$CFG/backup-$((n + 1))
+	[ "$(date +%Y)" -ge 2025 ] 2>/dev/null && BK=$BK-$(date +%Y%m%d-%H%M%S)
 	[ -e "$BK" ] && BK=$BK-$$
 	mkdir -p "$BK" && cp -p "$P" "$BK/printer.cfg" || { msg "cannot back up printer.cfg, nothing changed"; exit 1; }
 	cp -p "$P" "$P.migrate"

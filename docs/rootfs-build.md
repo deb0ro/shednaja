@@ -23,6 +23,10 @@ bash rootfs/tests/offline_check.sh    # optional, see "Offline checks"
   package when only its options change.
 - Environment: `SDK_DIR`, `BT_DIR`, `BR_OUT` (default `~/kobra/rootfs-out`), `BR_DL`,
   `STOCK` (default `build/stock`), `JOBS`, `CLEAN=1`.
+- **A build that goes onto a printer as a release is built with `CLEAN=1`.** Incremental
+  builds have kept files of an older layout in the target dir and a local package that was
+  not rebuilt (both fixed, but the class of bug stays); they are for quick `+devkey`
+  iterations. Downloads stay in `BR_DL`, so a clean build only costs build time.
 - The SDK checkout must be at the pinned commit, otherwise the build stops.
   `ALLOW_UNPINNED=1` builds anyway and appends `+unpinned` to the build id (also when
   `build/kernel` comes from such a kernel build). **Not for releases.**

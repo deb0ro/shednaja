@@ -83,6 +83,19 @@ PD=$W/d; old_install "$PD"; rm "$PD/config/mainsail.cfg"
 KOBRA_PD=$PD $SH "$MIG" > "$W/out"
 grep -q "^\[include $SHIP/mainsail.cfg\]" "$PD/config/printer.cfg" && ok "missing copy switched" || bad "missing copy: $(includes "$PD")"
 
+# 6. backup names: numbered on past older backup-<n> (not the old backup-<date>-<time>
+# names), the date only with a set clock
+PD=$W/e; old_install "$PD"; mkdir -p "$PD/config/backup-19700101-000017" "$PD/config/backup-mine"
+FAKE=$W/fakebin; mkdir -p "$FAKE"
+printf '#!/bin/sh\ncase "$1" in +%%Y) echo 1970 ;; *) echo 19700101-000012 ;; esac\n' > "$FAKE/date"; chmod +x "$FAKE/date"
+KOBRA_PD=$PD PATH=$FAKE:$PATH $SH "$MIG" > "$W/out"
+[ -f "$PD/config/backup-1/printer.cfg" ] && ok "clock not set: backup-1" || bad "clock not set: $(ls "$PD/config")"
+echo "# my change" >> "$PD/config/kobra_peripherals.cfg"
+sed -i 's|^\[include [^]]*kobra_peripherals.cfg\]|[include kobra_peripherals.cfg]|' "$PD/config/printer.cfg"
+KOBRA_PD=$PD $SH "$MIG" --force > "$W/out"
+ls -d "$PD"/config/backup-2-[0-9]*-[0-9]* > /dev/null 2>&1 && ok "clock set: backup-2-<date>-<time>" ||
+	bad "clock set: $(ls "$PD/config")"
+
 # every shipped file's current sum is listed (add it when the file changes)
 for f in "$KC"/*.cfg; do
 	n=$(basename "$f")

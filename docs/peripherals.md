@@ -122,10 +122,10 @@ Images before this copied the four files into `printer_data/config` and included
 name. At every boot `kobra-config-migrate --auto` (from `printer-data-init`) switches each
 include whose copy is unmodified (its sha256 is one a ShedNaja image shipped,
 `rootfs/board/kobra_s1/klipper_config/known-versions.sha256`) to the image's file and moves
-the copy and the old `printer.cfg` into `config/backup-<time>/`. A copy you edited stays in
-use without updates (the kernel log says so): move your changes into `printer.cfg`, then
-run `kobra-config-migrate --force` over SSH. Copies from development builds before the
-public history are not in the list and count as edited.
+the copy and the old `printer.cfg` into `config/backup-<n>/` (numbered; with the date,
+`backup-<n>-<date>-<time>`, when the clock is set, which at boot it usually is not yet). A
+copy you edited stays in use without updates (the kernel log says so): move your changes
+into `printer.cfg`, then run `kobra-config-migrate --force` over SSH.
 
 ## Not done
 
