@@ -135,8 +135,10 @@ echo "$cfg_sum" > "$BR_OUT/.kobra-config-sum"
 B=(make -C "$BR_SRC" O="$BR_OUT" BR2_EXTERNAL="$ROOT/rootfs")
 log "configure: kobra_s1_defconfig"
 "${B[@]}" -s kobra_s1_defconfig
-# packages from the local tree must be rebuilt when their sources change
-"${B[@]}" -s kobra-abctl-dirclean rtk-hciattach-dirclean >/dev/null 2>&1 || true
+# packages from the local tree must be rebuilt when their sources change: every package
+# with SITE_METHOD = local (a hand-kept list missed kobra-webcam)
+local_pkgs=$(grep -l '_SITE_METHOD *= *local' "$ROOT"/rootfs/package/*/*.mk | xargs -n1 basename | sed 's/\.mk$/-dirclean/')
+"${B[@]}" -s $local_pkgs >/dev/null 2>&1 || true
 log "build (-j$JOBS; first run downloads sources to $BR_DL and takes a while)"
 # WSL2's clock is pulled back by the host every few tens of seconds ("Time jumped
 # backwards" in the journal). That trips autoconf's "newly created file is older than

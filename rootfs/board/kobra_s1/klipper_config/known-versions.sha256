@@ -2,11 +2,26 @@
 # (rootfs/board/kobra_s1/klipper_config, mainsail.cfg from mainsail-config). An old copy
 # in printer_data/config with one of these sums is unmodified, so kobra-config-migrate can
 # replace it with the image's file. Add the new sum whenever one of the files changes
-# (CI checks that the current ones are listed); never remove a line.
+# (CI and post-build.sh check that the current ones are listed); never remove a
+# line of a version that was shipped.
 667db0db726cb783f83ad7ebc83416345e3b6b0293c69922621c091c38e76149  kobra_s1.cfg
 1b90d243e0bcf331e8c538ab985c56633e9378660c7e5c10eaea23d643158e6e  kobra_macros.cfg
 db529220c22160b952e5a047b59f3fd862a19e20b7b422b6b5e8f1925a168402  kobra_macros.cfg
 2ff85ffd008ad308fbc138efa9e02147d8df66c0e41ba6a70893ed5ebbd5612a  kobra_macros.cfg
 280bf1ed29a990bf0943f12732fdee317b4b503a74191984ca491ae5d18b1354  kobra_peripherals.cfg
 c1d486b93fa402a615acf8da7e56bf49693c859bfbce80495cd04c4150a23056  kobra_peripherals.cfg
-66de7aa5c3ae54d6c98ae1bffc98cbcf1086464d435cf36ccc877d01a862d58b  mainsail.cfg
+# mainsail.cfg is a symlink to client.cfg upstream: the sum of client.cfg's content
+1025f5596d828fc5ac3723885b1d747654b4fd5fd6c25219f3ab26f95157f73b  mainsail.cfg
+# development images before the public repository (2026-10-21)
+92f624d458829a9a6b2f3cdd20490e73f33f4ad480e0203ab52451fd53c43123  kobra_macros.cfg
+95ae9a535982495ec488d3293197d0888f6143d4bc0964c4751971bc39af18ad  kobra_macros.cfg
+9e2c919379c74eae543c226c8de7a4ee08c1978613e3ead567286371f981f7b2  kobra_macros.cfg
+448d80effefe2ff7c370af9bce06ee241ddbb2fa0effd27100f3e7306e8cb499  kobra_peripherals.cfg
+44b68bbcff124cc47a64a999b6f9b381fc3d2b6c5225d8312261df513c42df25  kobra_peripherals.cfg
+a4ee5ad96fbe5727595b60e9f2588b98f33de24d71c48900232ca2e110e664be  kobra_peripherals.cfg
+bfb554243ad9c9c84f7e2748311fa55a2cebec0533cb4a29de54f087dba20fe6  kobra_peripherals.cfg
+02b02636501118b73464ad9926f037f5d2af3c8521a2dbd3ef0b463ad0183877  kobra_s1.cfg
+07fdd0c6b7d1016a8df69023b303522e6ed5204a1b7e35e839e31f40b927a357  kobra_s1.cfg
+101129602a9e26fd00dc317febabda19492234198737af1ecd0ace0ef233e09a  kobra_s1.cfg
+5ce13dbc0b978237671df57c4f093652726877b720f8470fed298ddd28398819  kobra_s1.cfg
+6f3f6d3d118814e0fd676f6dd099ff61af3ef0c684b255b8d2af615a71702c66  kobra_s1.cfg

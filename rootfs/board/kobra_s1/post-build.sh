@@ -43,14 +43,25 @@ rm -rf "$T/var/lib/seedrng"; ln -s /userdata/shednaja/seedrng "$T/var/lib/seedrn
 # step 2: printer_data defaults (copied to /useremain/shednaja/printer_data on first boot by
 # /usr/libexec/kobra/printer-data-init) + "~/printer_data" for root, as in the vanilla configs
 B=$(dirname "$0")
+# from scratch: an incremental build keeps the target dir, and a file left over from an
+# older layout would be installed or included again on the printer
+rm -rf "$T/usr/share/shednaja/printer_data"
 mkdir -p "$T/usr/share/shednaja/printer_data"
 cp -a "$B/printer_data_defaults/." "$T/usr/share/shednaja/printer_data/"
 # shipped Klipper config, read-only and updated with the image: printer.cfg includes it
 # from here (mainsail.cfg comes from the mainsail-config package). The sums of earlier
 # versions let kobra-config-migrate recognise unmodified copies on older installs.
 install -d "$T/usr/share/shednaja/klipper"
+find "$T/usr/share/shednaja/klipper" -type f ! -name mainsail.cfg -delete	# mainsail-config's own
 install -m 0644 "$B"/klipper_config/*.cfg "$B/klipper_config/README.txt" "$T/usr/share/shednaja/klipper/"
 install -m 0644 "$B/klipper_config/known-versions.sha256" "$T/usr/share/shednaja/klipper-known-versions.sha256"
+# every file as it lands in the image must be listed (mainsail.cfg included, whose sum
+# only shows here), or the next migration would take it for an edited copy
+for f in "$T"/usr/share/shednaja/klipper/*.cfg; do
+	s="$(sha256sum "$f" | cut -d' ' -f1)  $(basename "$f")"
+	grep -qxF "$s" "$B/klipper_config/known-versions.sha256" ||
+		{ echo "post-build: add '$s' to klipper_config/known-versions.sha256"; exit 1; }
+done
 ln -sfn /useremain/shednaja/printer_data "$T/root/printer_data"
 # our S62lighttpd replaces Buildroot's S50lighttpd (needs printer_data dirs first)
 rm -f "$T/etc/init.d/S50lighttpd"

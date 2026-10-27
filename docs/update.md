@@ -214,3 +214,18 @@ updates may move it to the other slot (the installer handles either layout).
   3 long beeps. The `efe6943` installer logged "cannot read the A/B data in misc": stock's
   busybox 1.27.2 `od` has no `-A`/`-t`, so it went by rk_ota's exit status. `e434813` reads
   it with `hexdump`, and its slot check ran on stock and passed.
+- 2026-10-27, release `44d9f9e` (Klipper config shipped in the image, `kobra-config-migrate`,
+  `webcam.conf` read as data, filament macros refused while printing) over SSH on slot A,
+  on the config of the 2026-10-22 install: the migration moved the unmodified
+  `mainsail.cfg`, `kobra_s1.cfg` and `kobra_macros.cfg` to `config/backup-*` and switched
+  their includes; `kobra_peripherals.cfg` (a hand-edited comment) was kept until `--force`.
+  Klipper ready, no failed Moonraker components; `config/shednaja/` listed by Moonraker,
+  uploads and deletes there fail (read-only). A `webcam.conf` with `;`, `$(...)` and a
+  bare command line ran nothing, the bad lines were logged and ignored, a valid
+  `WEBCAM_FPS` was applied. `LOAD_FILAMENT`, `UNLOAD_FILAMENT` and `CUT_TIP` during a
+  print (a file with only `G4`) were refused without motion. Found on the way: the
+  `mainsail.cfg` sum in `known-versions.sha256` was that of the upstream symlink, and an
+  incremental build kept the old default configs and the old `S65webcam` (the first
+  build, `863a946`, reinstalled the copies after migrating and still sourced
+  `webcam.conf`); fixed in the list, `post-build.sh` and `build_rootfs.sh`.
+  Backup folders are named by the clock at boot, before NTP (`backup-19700101-000017`).
