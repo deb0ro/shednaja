@@ -1,0 +1,206 @@
+#!/bin/sh
+# ShedNaja Armbian loader: /sbin/init of the small squashfs in system_<slot>.
+# The kernel (6.1, from boot_<slot>) mounts this squashfs as / (U-Boot sets root=). We mount
+# useremain, put the Debian root from /useremain/armbian/root_a or root_b in place (A/B, see
+# below) and exec its systemd as PID 1. Nothing usable -> switch the SPL A/B metadata to the other
+# slot (stock) and reboot, so a bad Armbian install never leaves the board stuck.
+# Disable without touching the slot: create /useremain/armbian/disabled.
+export PATH=/bin:/sbin:/usr/sbin
+ROOTDIR=armbian/root_a   # set by the A/B selection below
+
+DEV=/dev
+log() { echo "loader: $*"; echo "<5>loader: $*" > $DEV/kmsg 2>/dev/null; }
+
+[ -c /dev/console ] || mount -t devtmpfs devtmpfs /dev
+exec < /dev/console > /dev/console 2>&1
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+
+# running slot from root= (p8 = system_a, p9 = system_b)
+case " $(cat /proc/cmdline) " in
+	*" root=/dev/mmcblk0p8 "*) slot=a ;;
+	*" root=/dev/mmcblk0p9 "*) slot=b ;;
+	*) slot="" ;;
+esac
+# kobra.root=<a|b>: this kernel was kexec'd by the first pass of this loader for that root
+kroot=
+for w in $(cat /proc/cmdline); do
+	case "$w" in kobra.root=a|kobra.root=b) kroot=${w#kobra.root=} ;; esac
+done
+
+part() {  # partition name by PARTNAME (blkdevparts: in uevent; no by-name links here)
+	for u in /sys/class/block/mmcblk0p*/uevent; do
+		grep -qx "PARTNAME=$1" "$u" && { basename "$(dirname "$u")"; return 0; }
+	done
+	return 1
+}
+misc=$(part misc)
+
+to_stock() {
+	log "$1 -> switching to the other slot (stock) and rebooting"
+	if [ -n "$slot" ] && [ -n "$misc" ]; then
+		kobra-abctl other --slot="$slot" "$DEV/$misc" && kobra-abctl display "$DEV/$misc"
+	else
+		log "slot or misc unknown (slot=$slot misc=$misc): not switching, SPL falls back after its tries"
+	fi
+	sync; sleep 3; reboot -f
+	sleep 30
+}
+
+log "slot $slot, kernel $(uname -r)"
+um=/dev/$(part useremain) || to_stock "no useremain partition"
+# Preen first (rc 0/1 fine, 2 = fixed, needs reboot), never format. useremain has no journal:
+# after a power cut (e.g. during a print) -p can refuse ("UNEXPECTED INCONSISTENCY", rc 4);
+# then repair like stock does at every boot (S20linkmount: e2fsck -y) instead of giving up.
+# The first version went to stock here (2026-10-29, power cut mid-print); Lite mounts anyway.
+e2fsck -p "$um"; rc=$?
+if [ $rc -ge 4 ]; then
+	log "e2fsck -p useremain: rc $rc, repairing with e2fsck -fy"
+	e2fsck -fy "$um"; rc=$?
+	log "e2fsck -fy useremain: rc $rc"
+fi
+mkdir -p /mnt/useremain 2>/dev/null
+mount -t ext4 -o noatime "$um" /mnt/useremain || to_stock "cannot mount useremain"
+
+[ -e /mnt/useremain/armbian/disabled ] && to_stock "/useremain/armbian/disabled exists"
+
+# ---- A/B of the Debian root: /useremain/armbian/root_a, root_b ----
+# ab/state (written by this loader and kobra-ab): ACTIVE = confirmed slot, TRY = slot under test,
+# TRIES = boots left for TRY. Each boot of TRY costs one try; kobra-ab confirm (kobra-bootok, after
+# multi-user.target) makes TRY the ACTIVE slot. Tries used up without a confirm -> back to ACTIVE.
+# 3 tries < SPL's 7, so a bad root rolls back before SPL falls back to stock.
+AB=/mnt/useremain/armbian
+ACTIVE=a; TRY=; TRIES=0
+if [ -f $AB/ab/state ]; then
+	while IFS='=' read -r k v; do
+		case "$k" in
+			ACTIVE) case "$v" in a|b) ACTIVE=$v ;; esac ;;
+			TRY) case "$v" in a|b) TRY=$v ;; esac ;;
+			TRIES) case "$v" in [0-9]) TRIES=$v ;; esac ;;
+		esac
+	done < $AB/ab/state
+fi
+ab_write() {
+	mkdir -p $AB/ab
+	printf 'ACTIVE=%s\nTRY=%s\nTRIES=%s\n' "$ACTIVE" "$TRY" "$TRIES" > $AB/ab/state.tmp && sync &&
+		mv $AB/ab/state.tmp $AB/ab/state && sync
+}
+has_init() { [ -e "$1/sbin/init" ] || [ -L "$1/sbin/init" ]; }
+# First install (from stock: the USB installer, from Lite: kobra-update --to-armbian): the
+# installers write boot/system and leave the root as $AB/install/rootfs.tar.gz, with this
+# board's identity from Lite (install/dropbear/*, install/root.hash) if there is one. Unpacked
+# here with our busybox (stock's tar cannot keep numeric owners), becomes root_a.
+if [ -f $AB/install/rootfs.tar.gz ]; then
+	I=$AB/install; N=$AB/root_a.new
+	log "first install: unpacking $(wc -c < $I/rootfs.tar.gz) B into root_a (a few minutes)"
+	rm -rf $N; mkdir -p $N
+	if gzip -dc $I/rootfs.tar.gz | tar -x --numeric-owner -f - -C $N && has_init $N; then
+		[ -d $I/dropbear ] && mkdir -p $N/etc/dropbear && cp $I/dropbear/* $N/etc/dropbear/
+		[ -f $I/root.hash ] && sed -i "s|^root:[^:]*:|root:$(cat $I/root.hash):|" $N/etc/shadow
+		[ -f $I/BUILD_ID ] && echo "BUILD_ID=$(cat $I/BUILD_ID)" >> $N/etc/os-release
+		rm -rf $AB/root_a; mv $N $AB/root_a
+		ACTIVE=a; TRY=; TRIES=0; ab_write
+		rm -rf $I; sync
+		log "first install: root_a ready"
+	else
+		rm -rf $N; sync
+		to_stock "first install: the root in $I/rootfs.tar.gz does not unpack"
+	fi
+fi
+# first boot after the single-root test install: its root becomes slot a
+if [ ! -e $AB/root_a ] && [ ! -e $AB/root_b ] && has_init $AB/root; then
+	mv $AB/root $AB/root_a && ACTIVE=a && TRY= && TRIES=0 && ab_write && log "root -> root_a (A/B)"
+fi
+rs=$ACTIVE
+if [ -n "$kroot" ]; then
+	rs=$kroot; log "second pass after kexec: root_$rs"   # its try was spent by the first pass
+elif [ -n "$TRY" ]; then
+	if [ "$TRIES" -gt 0 ]; then
+		TRIES=$((TRIES - 1)); ab_write; rs=$TRY
+		log "trying root_$TRY ($TRIES tries left after this boot)"
+	else
+		log "root_$TRY was not confirmed: back to root_$ACTIVE"
+		echo "$TRY" > $AB/ab/last-rollback; TRY=; ab_write
+	fi
+fi
+other=a; [ "$rs" = a ] && other=b
+if ! has_init $AB/root_$rs; then
+	has_init $AB/root_$other || to_stock "no Debian root in /useremain/armbian/root_a or root_b"
+	log "root_$rs has no /sbin/init: booting root_$other"
+	[ "$rs" = "$TRY" ] && { TRY=; TRIES=0; ab_write; }
+	rs=$other
+fi
+ROOTDIR=armbian/root_$rs
+R=/mnt/useremain/$ROOTDIR
+
+# ---- kernel of the chosen root ----
+# boot_<slot> holds a base kernel; each root brings its own (/boot/zImage + DTB, matching its
+# /lib/modules). When either differs from boot_<slot> (sha256 in the FIT header), kexec into the
+# root's kernel with kexec and fdtput from the root itself (Debian kexec-tools, device-tree-compiler)
+# and U-Boot's DTB fixups copied over (memory, serial number, MAC; bootargs come from kexec).
+# kobra.root=<x> makes the second pass of this loader boot the same root without spending a try.
+# ab/kexec-fails counts kexec boots, kobra-ab confirm clears it: after 2 unconfirmed ones a root
+# that is not on trial boots with the base kernel (a root on trial is handled by its tries).
+KZ=$R/boot/zImage
+KD=$R/boot/dtb/rv1106g-kobra-s1-armbian.dtb
+kexec_root() {
+	[ -z "$kroot" ] || return 0
+	[ -f "$KZ" ] && [ -f "$KD" ] || { log "root_$rs has no /boot/zImage + DTB: base kernel"; return 0; }
+	[ -x "$R/usr/sbin/kexec" ] && [ -x "$R/usr/bin/fdtput" ] ||
+		{ log "root_$rs has no kexec/fdtput: base kernel"; return 0; }
+	bp=$(part "boot_$slot") || return 0
+	hdr=$(dd if="$DEV/$bp" bs=4096 count=1 2>/dev/null | od -An -tx1 -v | tr -d ' \n')
+	kh=$(sha256sum < "$KZ"); kh=${kh%% *}
+	dh=$(sha256sum < "$KD"); dh=${dh%% *}
+	case "$hdr" in *"$kh"*) case "$hdr" in *"$dh"*) return 0 ;; esac ;; esac
+	fails=$(cat "$AB/ab/kexec-fails" 2>/dev/null); case "$fails" in [0-9]) ;; *) fails=0 ;; esac
+	if [ "$rs" != "$TRY" ] && [ "$fails" -ge 2 ]; then
+		log "root_$rs: $fails kexec boots without a confirm, base kernel $(uname -r)"; return 0
+	fi
+	echo $((fails + 1)) > "$AB/ab/kexec-fails"; sync
+	mount -t proc proc "$R/proc" && mount -t sysfs sysfs "$R/sys" && mount -t tmpfs tmpfs "$R/run" ||
+		{ log "mounts for kexec failed: base kernel"; kexec_undo; return 0; }
+	cp "$KD" "$R/run/k.dtb"
+	F=/sys/firmware/fdt
+	rx fdtput -c /run/k.dtb /memory 2>/dev/null
+	rx fdtput -t s /run/k.dtb /memory device_type memory
+	mem=$(rx fdtget -t x $F /memory reg) && rx fdtput -t x /run/k.dtb /memory reg $mem
+	sn=$(rx fdtget -t s $F / serial-number 2>/dev/null) &&
+		rx fdtput -t s /run/k.dtb / serial-number "$sn"
+	mac=$(rx fdtget -t bx $F /ethernet@ffa80000 local-mac-address 2>/dev/null) &&
+		rx fdtput -t bx /run/k.dtb /ethernet@ffa80000 local-mac-address $mac
+	if [ -z "$mem" ] || ! rx kexec -l /boot/zImage --dtb=/run/k.dtb \
+			--command-line="$(cat /proc/cmdline) kobra.root=$rs"; then
+		log "kexec -l of root_$rs's kernel failed: base kernel"; kexec_undo; return 0
+	fi
+	log "kexec into root_$rs's kernel (modules $(ls "$R/lib/modules" | tr '\n' ' '))"
+	# Hardware watchdog (DW WDT, Armbian DTS) for a kexec'd kernel that hangs: opened and closed
+	# without the magic close it keeps running and nothing here pings it. It survives kexec; the new
+	# kernel's driver finds it running and pings it until systemd takes it over (RuntimeWatchdogSec).
+	# If kexec -e fails, it resets the board in ~45 s unless systemd takes it over (kexec-fails counts).
+	# Not started on other boots: unpinged after the loader, it would reset a root whose systemd
+	# does not use it (2026-10-27, the old root_b rebooted every ~60 s). Same for a new kernel whose
+	# DTB leaves the watchdog disabled: only when it has the node enabled.
+	[ "$(rx fdtget -t s /run/k.dtb /watchdog@ff5a0000 status 2>/dev/null)" = okay ] &&
+		[ -c /dev/watchdog ] && : > /dev/watchdog 2>/dev/null
+	# kexec runs from useremain: read-only instead of unmounted, clean for the next e2fsck
+	sync; mount -o remount,ro /mnt/useremain && rx kexec -e
+	mount -o remount,rw /mnt/useremain
+	log "kexec -e failed: base kernel"; kexec_undo
+}
+rx() { PATH=/usr/sbin:/usr/bin:/sbin:/bin chroot "$R" "$@"; }   # a command of the root
+kexec_undo() { umount "$R/run" "$R/sys" "$R/proc" 2>/dev/null; }
+kexec_root
+
+# the Debian root as its own mount (pivot_root needs one), useremain visible inside it
+mount --bind "$R" /newroot || to_stock "bind of the Debian root failed"
+mkdir -p /newroot/useremain /newroot/mnt
+mount --bind /mnt/useremain /newroot/useremain
+mount --move /dev /newroot/dev && DEV=/newroot/dev
+umount /proc /sys
+
+cd /newroot || to_stock "cd /newroot"
+log "pivot_root into /useremain/$ROOTDIR, exec /sbin/init (systemd)"
+pivot_root . mnt || to_stock "pivot_root failed"
+DEV=/dev
+exec chroot . /sbin/init "$@" < /dev/console > /dev/console 2>&1

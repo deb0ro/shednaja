@@ -1,0 +1,2 @@
+# DHCP (kobra-dhcp@.service) on USB Ethernet adapters; wlan0's instance is enabled in the image
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="eth*|enx*|usb*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="kobra-dhcp@%k.service"

@@ -1,0 +1,129 @@
+#!/bin/bash
+# A/B of the Armbian (Debian) root on useremain: /useremain/armbian/root_a and root_b, chosen by
+# the loader in the system slot (armbian_build/loader/init) from /useremain/armbian/ab/state:
+#   ACTIVE=<a|b>  the confirmed root
+#   TRY=<a|b|>    a root under test; the loader boots it while TRIES > 0 (one try per boot)
+#   TRIES=<n>     and goes back to ACTIVE when they are used up without a confirm
+# Each root carries its kernel (/boot/zImage + DTB + /lib/modules); the loader kexecs it when it
+# differs from the boot slot's, so kernel and root switch and roll back together.
+#
+#   kobra-ab status
+#   kobra-ab install <rootfs.tar[.zst]|-> [--no-reboot]   new root into the other slot, try it next boot
+#   kobra-ab confirm        booted root == TRY -> ACTIVE (kobra-bootok runs this after multi-user.target)
+#   kobra-ab rollback       make the other root ACTIVE and reboot into it
+#
+# install keeps this board's identity (dropbear/OpenSSH host keys, root's authorized_keys and password, the sshd
+# drop-in, machine-id, fake-hwclock) and never touches the data (/useremain/armbian/shednaja).
+set -euo pipefail
+B=/useremain/armbian
+ST=$B/ab/state
+TRIES_NEW=3
+
+die() { echo "kobra-ab: $*" >&2; exit 1; }
+log() { echo "kobra-ab: $*"; logger -t kobra-ab -- "$*" 2>/dev/null || true; }
+
+ACTIVE=a; TRY=; TRIES=0
+if [ -f "$ST" ]; then
+	while IFS='=' read -r k v; do
+		case "$k" in
+			ACTIVE) [[ $v =~ ^[ab]$ ]] && ACTIVE=$v ;;
+			TRY) [[ $v =~ ^[ab]?$ ]] && TRY=$v ;;
+			TRIES) [[ $v =~ ^[0-9]$ ]] && TRIES=$v ;;
+		esac
+	done < "$ST"
+fi
+write_state() {
+	mkdir -p "$B/ab"
+	printf 'ACTIVE=%s\nTRY=%s\nTRIES=%s\n' "$ACTIVE" "$TRY" "$TRIES" > "$ST.tmp"
+	sync "$ST.tmp"; mv "$ST.tmp" "$ST"; sync "$B/ab"
+}
+booted() {  # root_a / root_b we run from (the loader bind-mounts it as /)
+	local s; s=$(findmnt -n -o SOURCE /)
+	case "$s" in
+		*"[/armbian/root_a]") echo a ;;
+		*"[/armbian/root_b]") echo b ;;
+		*) echo "" ;;
+	esac
+}
+other_of() { [ "$1" = a ] && echo b || echo a; }
+has_init() { [ -e "$1/sbin/init" ] || [ -L "$1/sbin/init" ]; }
+
+cmd=${1:-status}; shift || true
+case "$cmd" in
+status)
+	cur=$(booted)
+	echo "booted:  root_${cur:-?} ($(findmnt -n -o SOURCE /))"
+	echo "state:   ACTIVE=$ACTIVE TRY=${TRY:--} TRIES=$TRIES"
+	for s in a b; do
+		if has_init "$B/root_$s"; then
+			v=$(. "$B/root_$s/etc/os-release" 2>/dev/null; echo "${PRETTY_NAME:-?}")
+			k=$(cat "$B/root_$s/usr/lib/klipper/klippy/.version" 2>/dev/null || echo -)
+			echo "root_$s:  $v, klipper $k, installed $(cat "$B/root_$s/etc/kobra-ab-installed" 2>/dev/null || echo "?")"
+		else
+			echo "root_$s:  (empty)"
+		fi
+	done
+	[ -f "$B/ab/last-rollback" ] && echo "last rollback: from root_$(cat "$B/ab/last-rollback")"
+	# the loader kexecs the root's own kernel when it differs from boot_<slot> (kobra.root= on the cmdline)
+	case " $(cat /proc/cmdline) " in
+		*" kobra.root="*) echo "kernel:  $(uname -r), the root's own (kexec'd by the loader)" ;;
+		*) echo "kernel:  $(uname -r), from the boot slot" ;;
+	esac
+	[ -f "$B/ab/kexec-fails" ] && echo "kexec boots without a confirm: $(cat "$B/ab/kexec-fails")"
+	true ;;
+confirm)
+	cur=$(booted); [ -n "$cur" ] || die "not running from root_a/root_b"
+	rm -f "$B/ab/kexec-fails"   # this boot (kexec'd or not) got to multi-user
+	if [ -n "$TRY" ] && [ "$TRY" = "$cur" ]; then
+		ACTIVE=$cur; TRY=; TRIES=0; write_state; log "root_$cur confirmed (now ACTIVE)"
+	elif [ "$ACTIVE" != "$cur" ] && [ -z "$TRY" ]; then
+		# booted without TRY on a non-ACTIVE root (fallback because ACTIVE had no init): adopt it
+		ACTIVE=$cur; write_state; log "running root_$cur adopted as ACTIVE"
+	fi ;;
+rollback)
+	cur=$(booted); [ -n "$cur" ] || die "not running from root_a/root_b"
+	o=$(other_of "$cur"); has_init "$B/root_$o" || die "root_$o is empty, nothing to go back to"
+	ACTIVE=$o; TRY=; TRIES=0; write_state; log "rollback: root_$o is ACTIVE, rebooting"
+	systemctl reboot ;;
+install)
+	src=${1:?usage: kobra-ab install <rootfs.tar[.zst]|-> [--no-reboot]}; reboot=yes
+	[ "${2:-}" = --no-reboot ] && reboot=no
+	cur=$(booted); [ -n "$cur" ] || die "not running from root_a/root_b"
+	[ -z "$TRY" ] || die "root_$TRY is still on trial (TRY set): confirm or let it roll back first"
+	t=$(other_of "$cur"); N=$B/root_$t.new
+	avail=$(df -k --output=avail "$B" | tail -1 | tr -d ' ')
+	[ "$avail" -gt 1048576 ] || die "less than 1 GiB free on useremain"
+	log "installing into root_$t (running root_$cur)"
+	rm -rf "$N"; mkdir -p "$N"
+	case "$src" in
+		-) tar -x --numeric-owner --xattrs --xattrs-include='*' -f - -C "$N" ;;
+		*.zst) zstd -dc "$src" | tar -x --numeric-owner --xattrs --xattrs-include='*' -f - -C "$N" ;;
+		*.gz) tar -xz --numeric-owner --xattrs --xattrs-include='*' -f "$src" -C "$N" ;;
+		*) tar -x --numeric-owner --xattrs --xattrs-include='*' -f "$src" -C "$N" ;;
+	esac
+	has_init "$N" || die "the new root has no /sbin/init"
+	# this board's identity: root's SSH keys (a release install has none) and password
+	install -d -m 700 "$N/root/.ssh"
+	[ -f /root/.ssh/authorized_keys ] && cp -a /root/.ssh/authorized_keys "$N/root/.ssh/"
+	h=$(sed -n 's/^root:\([^:]*\):.*/\1/p' /etc/shadow)
+	[ -n "$h" ] && sed -i "s|^root:[^:]*:|root:${h}:|" "$N/etc/shadow"
+	# SSH host keys: dropbear's (the image has none, dropbear -R would make new ones), and OpenSSH's
+	# from roots before dropbear, so the fingerprint stays the same across installs
+	install -d -m 755 "$N/etc/dropbear" "$N/etc/ssh"
+	for f in /etc/dropbear/dropbear_*_host_key /etc/ssh/ssh_host_*; do
+		[ -f "$f" ] && cp -a "$f" "$N$f"
+	done
+	[ -f /etc/ssh/sshd_config.d/10-kobra-test.conf ] && [ -d "$N/etc/ssh/sshd_config.d" ] &&
+		cp -a /etc/ssh/sshd_config.d/10-kobra-test.conf "$N/etc/ssh/sshd_config.d/"
+	cp -a /etc/machine-id "$N/etc/machine-id"
+	[ -f /etc/fake-hwclock.data ] && cp -a /etc/fake-hwclock.data "$N/etc/"
+	rm -f "$N/root/.not_logged_in_yet" "$N/etc/systemd/system/multi-user.target.wants/armbian-firstrun.service"
+	date -u "+%F %T UTC" > "$N/etc/kobra-ab-installed"
+	sync
+	rm -rf "$B/root_$t"; mv "$N" "$B/root_$t"; sync
+	TRY=$t; TRIES=$TRIES_NEW; write_state
+	log "root_$t installed; next boot tries it ($TRIES_NEW tries, then back to root_$cur)"
+	[ "$reboot" = yes ] && systemctl reboot
+	true ;;
+*) die "unknown command $cmd (status|install|confirm|rollback)" ;;
+esac

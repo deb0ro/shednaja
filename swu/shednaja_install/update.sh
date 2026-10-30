@@ -10,6 +10,10 @@
 # partial update bundle would leave a mix of stock and ShedNaja in the target slot). The
 # oem partition is not needed by ShedNaja and stays as stock left it, unless a (development)
 # bundle carries an oem image.
+# Armbian variant (manifest variant=armbian): the bundle also holds rootfs.tar.gz, the Debian
+# root. boot/system (base kernel, loader) go into the slot as above; the root is moved to
+# /useremain/armbian/install/ and unpacked by the Armbian loader on its first boot (stock's
+# tar cannot keep numeric owners). Armbian's roots and data on useremain stay otherwise.
 # Log: shednaja-install.log on the USB stick.
 # Beeps: 1 short = started, 3 long = done (rebooting), 5 short = error (nothing switched).
 
@@ -50,6 +54,8 @@ else
     echo "WARNING: stock firmware ${stock:-unknown}, ShedNaja is tested with $TESTED_STOCK only"
 fi
 command -v rk_ota >/dev/null || fail "rk_ota missing"
+VARIANT=lite; grep -qx 'variant=armbian' "$HERE/manifest" && VARIANT=armbian
+echo "variant $VARIANT"
 
 # manifest: "image <part> <file> <size> <sha256>", md5sums: "<md5>  <file>" (stock busybox
 # has no sha256sum)
@@ -57,10 +63,16 @@ WRITE=""
 SEEN=""
 while read -r kind part file size sum extra; do
     [ "$kind" = image ] || continue
-    case "$part" in boot|oem|system) ;; *) fail "unknown partition in manifest" ;; esac
+    case "$part" in boot|oem|system|rootfs) ;; *) fail "unknown partition in manifest" ;; esac
     case " $SEEN " in *" $part "*) fail "partition $part twice in manifest" ;; esac
     SEEN="$SEEN $part"
-    [ "$file" = "$part.img" ] || fail "$part: image must be named $part.img"
+    if [ "$part" = rootfs ]; then
+        [ "$VARIANT" = armbian ] || fail "rootfs in a bundle that is not variant=armbian"
+        [ "$file" = rootfs.tar.gz ] || fail "rootfs: image must be named rootfs.tar.gz"
+    else
+        [ "$file" = "$part.img" ] || fail "$part: image must be named $part.img"
+    fi
+    [ "$VARIANT" = armbian ] && [ "$part" = oem ] && fail "the Armbian variant does not use oem"
     case "$size" in ''|*[!0-9]*) fail "$part: bad size in manifest" ;; esac
     [ -z "$extra" ] || fail "$part: extra fields in manifest"
     f=$HERE/$file; dev=/dev/block/by-name/${part}_$T
@@ -68,6 +80,7 @@ while read -r kind part file size sum extra; do
     [ -n "$md5" ] || fail "no md5 for $file"
     [ "$(wc -c < "$f")" = "$size" ] || fail "$file: wrong size"
     [ "$(md5sum "$f" | cut -d' ' -f1)" = "$md5" ] || fail "$file: md5 mismatch (damaged stick?)"
+    if [ "$part" = rootfs ]; then ROOTFS=$f; echo "rootfs.tar.gz ($size B) checked"; continue; fi
     [ -b "$dev" ] || fail "missing $dev"
     psize=$(($(cat /sys/class/block/$(basename "$(readlink -f "$dev")")/size) * 512))
     [ "$size" -le "$psize" ] || fail "$file larger than ${part}_$T"
@@ -78,8 +91,9 @@ while read -r kind part file size sum extra; do
         WRITE="$WRITE $part:$file:$size:$md5"
     fi
 done < "$HERE/manifest"
-for part in boot system; do
-    case " $SEEN " in *" $part "*) ;; *) fail "incomplete bundle: no $part image (a first install needs boot and system)" ;; esac
+NEED="boot system"; [ "$VARIANT" = armbian ] && NEED="boot system rootfs"
+for part in $NEED; do
+    case " $SEEN " in *" $part "*) ;; *) fail "incomplete bundle: no $part image (a first install needs $NEED)" ;; esac
 done
 
 for item in $WRITE; do
@@ -97,9 +111,19 @@ for item in $WRITE; do
     echo "${part}_$T written and verified"
 done
 
-# kobra-update / the USB updater on ShedNaja compare against this
-mkdir -p /useremain/shednaja/update
-cp "$HERE/manifest" /useremain/shednaja/update/installed.manifest
+# Armbian: the root for the loader's first boot (same filesystem as the unpacked swu: a move)
+if [ "$VARIANT" = armbian ]; then
+    I=/useremain/armbian/install
+    rm -rf "$I"; mkdir -p "$I"
+    mv "$ROOTFS" "$I/rootfs.tar.gz" || fail "cannot move the Armbian root to $I"
+    sed -n 's/^build_id=//p' "$HERE/manifest" > "$I/BUILD_ID"; sync
+    echo "Armbian root staged in $I (unpacked on the first Armbian boot)"
+fi
+
+# kobra-update / the USB updater on ShedNaja compare against this (Armbian: its data copy)
+UPD=/useremain/shednaja/update; [ "$VARIANT" = armbian ] && UPD=/useremain/armbian/shednaja/update
+mkdir -p "$UPD"
+cp "$HERE/manifest" "$UPD/installed.manifest"
 
 # A/B data in misc (Rockchip AvbABData at offset 2048, see kobra-abctl.c): magic "\0AB0",
 # then priority/tries/successful per slot. Prints "<priority a> <priority b>", or nothing

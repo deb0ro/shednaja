@@ -1,0 +1,10 @@
+[Unit]
+Description=Mark this A/B slot as booted OK (SPL fallback counter)
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kobra-bootok
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,31 @@
+#!/bin/sh
+# Armbian keeps its own copy of ShedNaja's data: /useremain/armbian/shednaja is bind-mounted on
+# /useremain/shednaja (fstab), so Lite's scripts and paths work unchanged and Lite's own data
+# (Klipper config, Moonraker database, HelixScreen settings) is never written from Armbian.
+# First boot: copy printer_data and helixscreen from Lite (if there), never the update bundles.
+set -e
+D=/useremain/armbian/shednaja
+mkdir -p "$D"
+for d in printer_data helixscreen; do
+	if [ -d "/useremain/shednaja/$d" ] && [ ! -e "$D/$d" ]; then
+		cp -a "/useremain/shednaja/$d" "$D/$d.tmp" && mv "$D/$d.tmp" "$D/$d"
+		echo "kobra-data-seed: copied $d from ShedNaja Lite"
+	fi
+done
+# Lite's touch calibration maps the 5.10 driver's raw range (0..1600 x 0..2176); the 6.1 driver
+# reports display coordinates (0..799 x 0..479), so the copied calibration is replaced by one made
+# with HelixScreen's calibration under 6.1 on the test board (2026-10-27, close to identity: the
+# uncalibrated taps were off by up to ~20 px). Recalibrate in HelixScreen if a panel differs.
+S=$D/helixscreen/settings.json
+if [ -f "$S" ]; then
+	python3 - "$S" <<'EOF'
+import json, sys
+p = sys.argv[1]; s = json.load(open(p))
+s.setdefault("input", {})["calibration"] = {
+    "a": 1.0201, "b": -0.0173, "c": -19.1627, "d": -0.0038, "e": 1.0491, "f": -1.0409,
+    "rotation": 180, "valid": True}
+json.dump(s, open(p, "w"), indent=2)
+print("kobra-data-seed: touch calibration set for the 6.1 driver (Lite's maps the 5.10 raw range)")
+EOF
+fi
+date -u +%FT%TZ > "$D/.seeded"

@@ -1,0 +1,18 @@
+# Kobra S1 additions to Armbian's rv1106 vendor kernel (armbian/linux-rockchip rk-6.1-rkr7.2).
+# Same layout as armbian-build/patch/kernel/rv1126-vendor-6.1/0000.patching_config.yaml.
+# dt/rv1106g-kobra-s1.dts is copied from kernel/dts/ by scripts/prepare.sh (one source of truth).
+config:
+  name: rv1106-6.1-kobra-s1
+  kind: kernel
+  type: vendor
+  branch: rk-6.1-rkr7.2
+
+  dts-directories:
+    - { source: "dt", target: "arch/arm/boot/dts" }
+
+  auto-patch-dt-makefile:
+    - { incremental: true, directory: "arch/arm/boot/dts", config-var: "CONFIG_ARCH_ROCKCHIP" }
+
+  patches-to-git:
+    do-not-commit-regexes:
+      - "^arch/([a-zA-Z0-9]+)/boot/dts/Makefile$"

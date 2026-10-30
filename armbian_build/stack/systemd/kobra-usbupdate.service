@@ -1,0 +1,15 @@
+[Unit]
+Description=Update from a USB stick at boot (ShedNaja S27kobra-usbupdate)
+# hub power first; the update directory is in the data copy (bind mount); before the stack
+After=kobra-usb.service useremain-shednaja.mount
+Wants=kobra-usb.service
+Before=klipper.service moonraker.service helixscreen.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/kobra/init/S27kobra-usbupdate start
+# installing a root takes a few minutes; kobra-update reboots when it is done
+TimeoutStartSec=20min
+
+[Install]
+WantedBy=multi-user.target

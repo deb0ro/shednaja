@@ -16,6 +16,14 @@
 Installing and the build overview are in the main [README](../README.md); open items in
 [TODO.md](../TODO.md).
 
+## Research
+
+Studies on paper, nothing in them is implemented.
+
+| Page | What |
+|---|---|
+| [research/armbian-rv1106.md](research/armbian-rv1106.md) | Armbian / a Debian userspace on the host board instead of the Buildroot rootfs: kernel options, storage, RAM, a test plan, recommendation; the build setup for it is in [../armbian_build/](../armbian_build/README.md) |
+
 ## History
 
 [history/](history/) holds the development logs: experiments and tests in the order they

@@ -26,7 +26,7 @@ ShedNaja drives it. The investigation and measurements behind this page:
 
 | Peripheral | Wired to | Stock driver | ShedNaja |
 |---|---|---|---|
-| USB hub GL850G (`05e3:0610`), 4 ports | SoC USB2 host via a USB switch on **gpio41** (GPIO1_B1) | `kenv/run.sh` drives gpio41 high ("usb sel") | `S25kobra-usb` sets gpio41 = 1; without it nothing on USB enumerates |
+| USB hub GL852G (`05e3:0610`, marking on U11), 4 ports | SoC USB2 host via a USB switch on **gpio41** (GPIO1_B1) | `kenv/run.sh` drives gpio41 high ("usb sel") | `S25kobra-usb` sets gpio41 = 1; without it nothing on USB enumerates |
 | Camera SunplusIT `13d3:784b`, UVC | hub port 3 → `/dev/video0` | `gkcam` (H.264 cloud, snapshots, NPU spaghetti detection, timelapse) | mjpg-streamer `S65webcam` → lighttpd `/webcam/` → Moonraker `[webcam kobra_s1]` |
 | Chamber light | host **gpio117** (GPIO3_C5), active high | GoKlipper `[led_pin]` | `[output_pin chamber_light] pin: host:gpiochip3/gpio21` (Klipper Linux MCU) |
 | Buzzer | host **PWM0** (GPIO1_A2) | `bee_path` (PWM enable) | `[output_pin beeper] pin: host:pwmchip0/pwm0`, `M300` |

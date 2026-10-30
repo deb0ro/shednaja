@@ -4,6 +4,8 @@
 # disk) has shednaja-update*.tar in its root folder, install it with kobra-update.
 # Runs after S25kobra-usb (hub power) and before Klipper/Moonraker start. A bundle whose
 # manifest equals the last installed one is skipped, so leaving the stick in is harmless.
+# The Armbian variant runs this too (kobra-usbupdate.service, before Klipper) and looks
+# for shednaja-armbian-update*.tar instead, so a stick for one variant never switches the other.
 # Each bundle is tried only once: if the update fails, the next boot does not try it
 # again (no reboot loop); a different bundle, or removing $TRIED, allows a new try.
 # With several bundles the last one by name wins.
@@ -12,12 +14,15 @@ MNT=/tmp/kobra-usbupdate
 UPD=/useremain/shednaja/update
 LAST=$UPD/installed.manifest
 TRIED=$UPD/usb-tried.manifest
+PATTERN=shednaja-update
+[ -x /usr/local/sbin/kobra-ab ] && PATTERN=shednaja-armbian-update
 
 wait_for() {	# wait_for <seconds> <glob>
 	n=0
 	while [ $n -lt $(($1 * 4)) ]; do
 		ls $2 >/dev/null 2>&1 && return 0
-		usleep 250000; n=$((n + 1))
+		if command -v usleep > /dev/null; then usleep 250000; else sleep 0.25; fi
+		n=$((n + 1))
 	done
 	return 1
 }
@@ -27,12 +32,12 @@ case "$1" in
 		# no mass storage device on the hub after 5 s: nothing to do
 		wait_for 5 "/sys/bus/usb/drivers/usb-storage/*:*" || exit 0
 		wait_for 10 "/sys/block/sd*" || exit 0
-		mdev -s
+		if command -v mdev > /dev/null; then mdev -s; else udevadm settle -t 10; fi
 		mkdir -p $MNT
 		for dev in /dev/sd[a-z]1 /dev/sd[a-z]; do
 			[ -b "$dev" ] || continue
 			mount -o ro "$dev" $MNT 2>/dev/null || continue
-			b=$(ls $MNT/shednaja-update*.tar 2>/dev/null | sort | tail -n 1)
+			b=$(ls $MNT/$PATTERN*.tar 2>/dev/null | sort | tail -n 1)
 			if [ -n "$b" ]; then
 				if tar -xOf "$b" manifest 2>/dev/null | cmp -s - "$LAST"; then
 					echo "kobra-usbupdate: $(basename "$b") already installed" > /dev/kmsg

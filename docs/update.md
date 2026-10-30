@@ -142,6 +142,47 @@ system_b, init died, and the board hung until it was power-cycled.
 A power loss while an update is being written leaves the ShedNaja slot broken; see
 [If ShedNaja does not start](#if-shednaja-does-not-start).
 
+## Armbian variant
+
+The same `kobra-update`, bundle format and USB rule (`armbian_build/README.md` has the
+variant itself). An Armbian bundle holds `rootfs.tar.gz`, the Debian root with its own
+kernel and the Klipper stack, and only rarely `boot.img` / `system.img` (base kernel,
+loader):
+
+```
+bash tools/make_update_bundle.sh --rootfs build/armbian/rootfs-trixie.tar.zst
+# -> build/update/shednaja-armbian-update-<id>.tar
+```
+
+- `kobra-update` (it sees `/usr/local/sbin/kobra-ab`) checks the bundle as above, the free
+  space on useremain (4× the archive), the print state, then `kobra-ab install`s the root
+  into the **inactive** `/useremain/armbian/root_a|b` while the system keeps running,
+  writes `BUILD_ID=` into its `os-release`, writes boot/system in place with readback if the
+  bundle has them, and reboots. No PID 1 handover: nothing the running system reads is
+  overwritten. The loader tries the new root 3 times; it confirms itself after
+  `multi-user.target`, otherwise the previous root comes back.
+- Over SSH as above (`scp -O` works, dropbear runs `sftp-server` too). From a USB stick:
+  `kobra-usbupdate.service` runs `S27kobra-usbupdate` before Klipper and looks for
+  `shednaja-armbian-update*.tar` (Lite for `shednaja-update*.tar`), so a stick for one
+  variant never switches the other.
+- From Mainsail (both variants): upload the bundle in the Machine tab (config files) into a
+  folder `updates`, then run the `SHEDNAJA_UPDATE` macro (also in HelixScreen's macro list).
+  It shows the newest bundle for the variant with its build id in a dialog; "Install" starts
+  `kobra-update --yes --remove-bundle` as its own systemd unit (Lite: its own process, which
+  ends with the PID 1 handover), the bundle file is deleted once verified, the printer
+  restarts by itself. Refused while printing; on the Armbian variant kobra-update does not
+  reboot if a print was started during the install (the new root then starts at the next
+  restart). Moonraker's upload temp files go to `/useremain/shednaja/tmp` (`S61moonraker`):
+  `/tmp` is a tmpfs of 117 MB and a 200 MB upload failed with "No space left on device".
+- `printer_data` is the variant's own copy (`/useremain/armbian/shednaja`, bound to
+  `/useremain/shednaja`), shared by both roots and never in a bundle; the update directory
+  sits in it.
+- `ROLLBACK_SYSTEM` (Mainsail, HelixScreen; `[kobra_slot]`) goes back to the previous root
+  after a confirmation dialog, refused while printing; over SSH `kobra-ab rollback`. On Lite
+  the command says there is no second copy.
+- A Lite bundle (`kobra-update` on Lite) refuses an Armbian bundle and the other way round
+  (an Armbian printer refuses `oem`).
+
 ## Back to stock
 
 The other slot still holds the stock firmware: `kobra-abctl other` + reboot boots it (until the next

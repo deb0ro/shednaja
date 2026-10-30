@@ -1,0 +1,14 @@
+[Unit]
+Description=Moonraker (ShedNaja S61moonraker)
+After=klipper.service network.target useremain-shednaja.mount
+
+[Service]
+Type=forking
+PIDFile=/run/moonraker.pid
+ExecStart=/usr/libexec/kobra/init/S61moonraker start
+ExecStop=/usr/libexec/kobra/init/S61moonraker stop
+# under memory pressure: camera first, then Moonraker (Klipper keeps printing without it)
+OOMScoreAdjust=300
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=HelixScreen (ShedNaja S70helixscreen)
+After=moonraker.service
+
+[Service]
+Type=forking
+PIDFile=/run/helixscreen.pid
+ExecStart=/usr/libexec/kobra/init/S70helixscreen start
+ExecStop=/usr/libexec/kobra/init/S70helixscreen stop
+OOMScoreAdjust=200
+
+[Install]
+WantedBy=multi-user.target

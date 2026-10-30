@@ -1,0 +1,13 @@
+[Unit]
+Description=Separate copy of ShedNaja's printer data for Armbian (seeded once)
+DefaultDependencies=no
+After=local-fs-pre.target
+Before=useremain-shednaja.mount local-fs.target
+ConditionPathExists=!/useremain/armbian/shednaja/.seeded
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/kobra/kobra-data-seed
+
+[Install]
+WantedBy=local-fs.target
