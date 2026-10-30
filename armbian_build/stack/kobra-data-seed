@@ -16,16 +16,18 @@ done
 # reports display coordinates (0..799 x 0..479), so the copied calibration is replaced by one made
 # with HelixScreen's calibration under 6.1 on the test board (2026-10-27, close to identity: the
 # uncalibrated taps were off by up to ~20 px). Recalibrate in HelixScreen if a panel differs.
+# Without Lite's data (install straight from stock) the settings start with just this: HelixScreen's
+# wizard skips its calibration step on the 6.1 driver (display range), so it would stay uncalibrated.
 S=$D/helixscreen/settings.json
-if [ -f "$S" ]; then
-	python3 - "$S" <<'EOF'
+mkdir -p "$D/helixscreen"
+[ -s "$S" ] || echo '{}' > "$S"
+python3 - "$S" <<'EOF'
 import json, sys
 p = sys.argv[1]; s = json.load(open(p))
 s.setdefault("input", {})["calibration"] = {
     "a": 1.0201, "b": -0.0173, "c": -19.1627, "d": -0.0038, "e": 1.0491, "f": -1.0409,
     "rotation": 180, "valid": True}
 json.dump(s, open(p, "w"), indent=2)
-print("kobra-data-seed: touch calibration set for the 6.1 driver (Lite's maps the 5.10 raw range)")
+print("kobra-data-seed: touch calibration set for the 6.1 driver")
 EOF
-fi
 date -u +%FT%TZ > "$D/.seeded"
