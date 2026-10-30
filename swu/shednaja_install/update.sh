@@ -80,7 +80,7 @@ while read -r kind part file size sum extra; do
     [ -n "$md5" ] || fail "no md5 for $file"
     [ "$(wc -c < "$f")" = "$size" ] || fail "$file: wrong size"
     [ "$(md5sum "$f" | cut -d' ' -f1)" = "$md5" ] || fail "$file: md5 mismatch (damaged stick?)"
-    if [ "$part" = rootfs ]; then ROOTFS=$f; echo "rootfs.tar.gz ($size B) checked"; continue; fi
+    if [ "$part" = rootfs ]; then ROOTFS=$f ROOTFS_SIZE=$size; echo "rootfs.tar.gz ($size B) checked"; continue; fi
     [ -b "$dev" ] || fail "missing $dev"
     psize=$(($(cat /sys/class/block/$(basename "$(readlink -f "$dev")")/size) * 512))
     [ "$size" -le "$psize" ] || fail "$file larger than ${part}_$T"
@@ -95,6 +95,29 @@ NEED="boot system"; [ "$VARIANT" = armbian ] && NEED="boot system rootfs"
 for part in $NEED; do
     case " $SEEN " in *" $part "*) ;; *) fail "incomplete bundle: no $part image (a first install needs $NEED)" ;; esac
 done
+
+# Armbian: everything about the root is checked before anything is written. The build id
+# goes into the root's os-release, so only a plain one. The build the active Armbian root
+# already has is not staged again (the loader would keep it anyway); any other root has to fit:
+# the loader unpacks it next to the installed roots, about 3.5 times the archive, and goes
+# back to stock (after this installer said done) when it does not fit.
+STAGE_ROOT=1
+if [ "$VARIANT" = armbian ]; then
+    BID=$(sed -n 's/^build_id=//p' "$HERE/manifest")
+    case "$BID" in ''|*[!A-Za-z0-9._+-]*) fail "bad build_id in manifest" ;; esac
+    A=/useremain/armbian
+    act=$(sed -n 's/^ACTIVE=\([ab]\)$/\1/p' $A/ab/state 2>/dev/null); act=${act:-a}
+    if { [ -e $A/root_$act/sbin/init ] || [ -L $A/root_$act/sbin/init ]; } &&
+            grep -qxF "BUILD_ID=$BID" $A/root_$act/etc/os-release 2>/dev/null; then
+        STAGE_ROOT=0; echo "Armbian root_$act already has build $BID: only the slot is switched"
+    else
+        set -- $(df -k /useremain | sed -n '$p')
+        avail=$(($4 * 1024)); need=$((ROOTFS_SIZE * 4))
+        [ "$avail" -ge "$need" ] ||
+            fail "not enough space on useremain for the Armbian root: $avail B free, $need B needed (delete print files or timelapses on stock)"
+        echo "useremain: $avail B free, $need B needed"
+    fi
+fi
 
 for item in $WRITE; do
     set -- $(echo "$item" | tr : ' ')
@@ -112,12 +135,14 @@ for item in $WRITE; do
 done
 
 # Armbian: the root for the loader's first boot (same filesystem as the unpacked swu: a move)
-if [ "$VARIANT" = armbian ]; then
+if [ "$VARIANT" = armbian ] && [ "$STAGE_ROOT" = 1 ]; then
     I=/useremain/armbian/install
     rm -rf "$I"; mkdir -p "$I"
     mv "$ROOTFS" "$I/rootfs.tar.gz" || fail "cannot move the Armbian root to $I"
-    sed -n 's/^build_id=//p' "$HERE/manifest" > "$I/BUILD_ID"; sync
+    echo "$BID" > "$I/BUILD_ID"; sync
     echo "Armbian root staged in $I (unpacked on the first Armbian boot)"
+elif [ "$VARIANT" = armbian ]; then
+    rm -rf /useremain/armbian/install    # nothing left from an earlier attempt
 fi
 
 # kobra-update / the USB updater on ShedNaja compare against this (Armbian: its data copy)

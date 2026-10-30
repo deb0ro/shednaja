@@ -26,6 +26,8 @@ Known limits of the beta:
 - The first boot after an install takes a few minutes longer (the root is unpacked).
 
 Space: about 1.5 GB on useremain (two Debian roots plus an update), your print files stay.
+The installer checks the free space before it writes anything (5 short beeps and the reason in
+`shednaja-install.log` if it is too little).
 
 ## Install
 
