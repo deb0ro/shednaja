@@ -56,7 +56,10 @@ status)
 	echo "state:   ACTIVE=$ACTIVE TRY=${TRY:--} TRIES=$TRIES"
 	for s in a b; do
 		if has_init "$B/root_$s"; then
-			v=$(. "$B/root_$s/etc/os-release" 2>/dev/null; echo "${PRETTY_NAME:-?}")
+			# read, not sourced: a root's os-release is data
+			v=$(sed -n 's/^PRETTY_NAME=//p' "$B/root_$s/etc/os-release" 2>/dev/null | tr -d '"')
+			bid=$(sed -n 's/^BUILD_ID=//p' "$B/root_$s/etc/os-release" 2>/dev/null | tail -n 1)
+			v="${v:-?}${bid:+, build $bid}"
 			k=$(cat "$B/root_$s/usr/lib/klipper/klippy/.version" 2>/dev/null || echo -)
 			echo "root_$s:  $v, klipper $k, installed $(cat "$B/root_$s/etc/kobra-ab-installed" 2>/dev/null || echo "?")"
 		else
