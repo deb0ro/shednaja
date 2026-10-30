@@ -56,12 +56,61 @@ the only copy of your printer's own stock system, bootloader and calibration dat
 and `useremain`'s md5 is expected to differ ("CHANGED"). Everything a restore of the system
 needs (bootloader, slots, `misc`) is read exactly.
 
-## Restoring
+## Restoring stock into both slots
 
-Not tested yet. Single partitions can be written back from a running system with `dd` to
-`/dev/block/by-name/<name>`, never the slot the printer runs from. A whole-disk restore needs a
-way to write the eMMC while nothing runs from it (maskrom, not working yet). Ask before you
-try; the safer way back is `REBOOT_TO_STOCK` and the installer stick (docs/update.md).
+**Not tested yet.** This puts the stock system from the backup back into both slots and
+removes ShedNaja. The slot the printer runs from is never written: stock is started from its
+own slot (ShedNaja never writes it), and the other slot, the one ShedNaja ran from, is
+written from the backup.
+
+Never write `idblock`, `uboot_*`, `env`, `userdata` or `useremain`: ShedNaja does not change
+them. `misc` only holds the A/B data, which stock manages itself. A whole-disk restore would
+need a way to write the eMMC while nothing runs from it (maskrom, not working yet).
+
+1. **Start stock:** run the macro `REBOOT_TO_STOCK` (Mainsail or the display). The printer
+   comes up on stock with Rinkhals (SSH `root` / `rockchip`). With your SSH key on the
+   printer (step 3 of the backup) the following steps do not ask for the password every time.
+2. **Find the slot stock runs from:**
+   ```
+   ssh root@<printer-ip> 'tr " " "\n" < /proc/cmdline | grep ^root='
+   ```
+   `root=/dev/mmcblk0p8` means stock runs from slot A, and you restore slot **b**.
+   `p9` means slot B, and you restore slot **a**.
+3. **Write that slot from the backup and check it.** Run this from the repository's root
+   folder. The images go straight over SSH, so no space is needed on the printer:
+   ```
+   D=dumps/emmc_YYYYMMDD_HHMMSS; IP=<printer-ip>; T=b    # T = the slot from step 2
+   for p in boot system oem ac_lib ac_app; do
+     n=${p}_$T
+     ssh root@$IP "d=\$(readlink -f /dev/block/by-name/$n); grep -q \"^\$d \" /proc/mounts && { echo '$n is mounted - STOP'; exit 1; }; dd of=\$d bs=64k conv=fsync" < $D/$n.img || break
+     want=$(awk -v n=$n '$1==n{print $5}' $D/md5.txt)
+     got=$(ssh root@$IP "sync; echo 3 > /proc/sys/vm/drop_caches; md5sum /dev/block/by-name/$n" | cut -d' ' -f1)
+     [ "$want" = "$got" ] && echo "$n OK" || { echo "$n FAILED - write it again"; break; }
+   done
+   ```
+   Go on only when all five say `OK`. If one fails, write it again, and do not restart into
+   that slot until it is OK. Stock keeps running from its own slot in the meantime.
+4. **Check the running slot against the backup** (read-only; S is the other slot):
+   ```
+   S=a; for p in boot system oem ac_lib ac_app; do n=${p}_$S; echo "$n $(ssh root@$IP md5sum /dev/block/by-name/$n | cut -d' ' -f1) $(awk -v n=$n '$1==n{print $5}' $D/md5.txt)"; done
+   ```
+   The same two sums on each line mean both slots now hold the stock from the backup.
+   Different sums mean stock was updated (OTA) after the backup. Keep it that way (the newer
+   stock), or switch to the other slot (step 6) and repeat step 3 for slot S.
+5. **Remove ShedNaja's files** (download `printer_data` first if you want your
+   configuration):
+   ```
+   ssh root@$IP 'rm -rf /useremain/armbian /useremain/shednaja /useremain/shednaja-install.log; sync'
+   ```
+   Print files and Rinkhals stay; Rinkhals has its own uninstall.
+6. **Optional, try the restored slot:**
+   ```
+   ssh root@$IP 'rk_ota --misc=other --mode=retry && reboot'
+   ```
+   The printer should come up on stock again; step 2 shows the other slot now. If that slot
+   does not start, the bootloader returns to the first one after its tries.
+
+To go back to ShedNaja later, use the installer stick again (docs/update.md).
 
 For developers: `KEY=keys/kobra_ed25519 KNOWN_HOSTS=keys/known_hosts bash tools/backup_emmc.sh <ip>`
 uses the project's test key and known_hosts as the script did before.
