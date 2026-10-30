@@ -82,8 +82,15 @@ if [ -f "$STOCK/rtlbt/rtl8723d_fw" ]; then
   mkdir -p "$FW"
   cp "$STOCK/rtlbt/rtl8723d_fw" "$FW/rtl8723ds_fw.bin"
   cp "$STOCK/rtlbt/rtl8723d_config" "$FW/rtl8723ds_config.bin"
+elif [ -f "${BT_DIR:=$HOME/kobra/rkwifibt}/firmware/realtek/RTL8723DS/rtl8723d_fw" ]; then
+  # fallback as in Lite's rootfs: Realtek's public copy (radxa/rkwifibt, fetched by
+  # tools/build_rootfs.sh)
+  log "BT firmware from $BT_DIR (Realtek's public copy, no $STOCK/rtlbt)"
+  mkdir -p "$FW"
+  cp "$BT_DIR/firmware/realtek/RTL8723DS/rtl8723d_fw" "$FW/rtl8723ds_fw.bin"
+  cp "$BT_DIR/firmware/realtek/RTL8723DS/rtl8723d_config" "$FW/rtl8723ds_config.bin"
 else
-  echo "no $STOCK/rtlbt (tools/fetch_stock.sh, or STOCK=...): image without BT firmware"
+  echo "no $STOCK/rtlbt and no $BT_DIR (tools/build_rootfs.sh, or STOCK=...): image without BT firmware"
 fi
 
 log "device tree: kernel/dts -> userpatches dt/ (trial compile against the pinned 6.1 dtsi)"
