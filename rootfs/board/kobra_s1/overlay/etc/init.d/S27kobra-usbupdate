@@ -8,7 +8,8 @@
 # for shednaja-armbian-update*.tar instead, so a stick for one variant never switches the other.
 # Each bundle is tried only once: if the update fails, the next boot does not try it
 # again (no reboot loop); a different bundle, or removing $TRIED, allows a new try.
-# With several bundles the last one by name wins.
+# With several bundles the newest file wins (its time on the stick; the names carry a commit
+# hash, so their order says nothing).
 
 MNT=/tmp/kobra-usbupdate
 UPD=/useremain/shednaja/update
@@ -37,7 +38,7 @@ case "$1" in
 		for dev in /dev/sd[a-z]1 /dev/sd[a-z]; do
 			[ -b "$dev" ] || continue
 			mount -o ro "$dev" $MNT 2>/dev/null || continue
-			b=$(ls $MNT/$PATTERN*.tar 2>/dev/null | sort | tail -n 1)
+			b=$(ls -t $MNT/$PATTERN*.tar 2>/dev/null | head -n 1)
 			if [ -n "$b" ]; then
 				if tar -xOf "$b" manifest 2>/dev/null | cmp -s - "$LAST"; then
 					echo "kobra-usbupdate: $(basename "$b") already installed" > /dev/kmsg

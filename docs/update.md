@@ -67,7 +67,7 @@ into the root folder of a FAT32 or exFAT stick (MBR or GPT; GPT needs a kernel f
 plug it into the printer, power-cycle.
 `S27kobra-usbupdate` installs it at boot before Klipper starts and reboots. A bundle whose
 manifest equals the last installed one is skipped, so the stick can stay in. With several
-bundles the last one by name is used.
+bundles the newest file is used (by its time on the stick, not its name).
 
 **First install from the stock firmware (USB installer):**
 `bash tools/make_install_swu.sh [bundle.tar]` wraps a bundle into
@@ -167,7 +167,7 @@ bash tools/make_update_bundle.sh --rootfs build/armbian/rootfs-trixie.tar.zst
   variant never switches the other.
 - From Mainsail (both variants): upload the bundle in the Machine tab (config files) into a
   folder `updates`, then run the `SHEDNAJA_UPDATE` macro (also in HelixScreen's macro list).
-  It shows the newest bundle for the variant with its build id in a dialog; "Install" starts
+  It shows the newest upload for the variant with its build id in a dialog; "Install" starts
   `kobra-update --yes --remove-bundle` as its own systemd unit (Lite: its own process, which
   ends with the PID 1 handover), the bundle file is deleted once verified, the printer
   restarts by itself. Refused while printing; on the Armbian variant kobra-update does not

@@ -16,9 +16,10 @@
 #
 # _SHEDNAJA_UPDATE: install an update bundle uploaded in Mainsail into the "updates" folder
 # of the config files (printer_data/config/updates; Moonraker takes uploads up to 1 GB
-# there, the gcodes root only G-code). The newest bundle for this variant (Lite:
+# there, the gcodes root only G-code). The newest upload for this variant (Lite:
 # shednaja-update*.tar, Armbian: shednaja-armbian-update*.tar) is shown with its build id;
-# CONFIRM=1 starts "kobra-update --yes --remove-bundle" as its own process. Refused while a
+# its Install button (CONFIRM=1 FILE=<that bundle>) starts "kobra-update --yes
+# --remove-bundle" for exactly that file as its own process. Refused while a
 # print is running or paused; kobra-update checks that again and reboots when done.
 #
 # [kobra_slot]
@@ -39,6 +40,7 @@
 #   _SHEDNAJA_UPDATE {rawparams}
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
+import fnmatch
 import glob
 import logging
 import os
@@ -89,12 +91,22 @@ class KobraSlot:
         self.check_idle(gcmd, '_SHEDNAJA_UPDATE')
         pattern = ('shednaja-armbian-update*.tar' if os.access(KOBRA_AB, os.X_OK)
                    else 'shednaja-update*.tar')
-        bundles = sorted(glob.glob(os.path.join(self.update_dir, pattern)))
-        if not bundles:
-            raise gcmd.error("_SHEDNAJA_UPDATE: no %s in the config folder 'updates'"
-                             " (upload it there in Mainsail)" % (pattern,))
-        bundle = bundles[-1]
-        name = os.path.basename(bundle)
+        name = gcmd.get('FILE', None)
+        if name is not None:
+            # from the dialog: exactly the bundle it showed, not whatever is newest by now
+            if os.path.basename(name) != name or not fnmatch.fnmatch(name, pattern):
+                raise gcmd.error("_SHEDNAJA_UPDATE: FILE must be a %s in 'updates'" % (pattern,))
+            bundle = os.path.join(self.update_dir, name)
+            if not os.path.isfile(bundle):
+                raise gcmd.error("_SHEDNAJA_UPDATE: %s is not in 'updates' any more" % (name,))
+        else:
+            bundles = glob.glob(os.path.join(self.update_dir, pattern))
+            if not bundles:
+                raise gcmd.error("_SHEDNAJA_UPDATE: no %s in the config folder 'updates'"
+                                 " (upload it there in Mainsail)" % (pattern,))
+            # the last upload: names carry a commit hash, their order says nothing
+            bundle = max(bundles, key=os.path.getmtime)
+            name = os.path.basename(bundle)
         try:
             manifest = subprocess.check_output(['tar', '-xOf', bundle, 'manifest'],
                                                stderr=subprocess.STDOUT, timeout=60)
@@ -113,7 +125,7 @@ class KobraSlot:
                     "action:prompt_footer_button Cancel|RESPOND TYPE=command"
                     " MSG=action:prompt_end",
                     "action:prompt_footer_button Install"
-                    "|_SHEDNAJA_UPDATE CONFIRM=1|primary",
+                    "|_SHEDNAJA_UPDATE CONFIRM=1 FILE=%s|primary" % (name,),
                     "action:prompt_show"):
                 self.gcode.respond_raw("// " + line)
             return
