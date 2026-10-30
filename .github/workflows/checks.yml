@@ -36,3 +36,8 @@ jobs:
 
       - name: kobra-config-migrate
         run: bash rootfs/tests/test_config_migrate.sh
+
+      - name: Armbian loader A/B (host busybox)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq busybox-static xxd > /dev/null
+          bash armbian_build/loader/test_ab.sh

@@ -62,7 +62,7 @@ touch, eMMC, the MCU UARTs and USB storage, but no Wi-Fi.
 | `scripts/prepare.sh` | yes | in WSL: pinned `armbian/build` to `~/kobra/armbian-build`, sources to `~/kobra/armbian-src`, generates the patch, copies the DTS, checks it with `dtc`, syncs `userpatches` |
 | `scripts/build.sh` | yes | `./compile.sh kobra-s1` (image) or `... kernel` (kernel .deb only) |
 | `scripts/pack_boot.sh` | yes | kernel .deb → `build/armbian/boot.img` (`tools/mkboot_kernel.py`, stock FIT template, our logo) |
-| `scripts/extract_rootfs.sh` | yes | image → `build/armbian/rootfs-<release>.tar.zst` (+ `.sha256`, `rootfs-report.txt`), as root (loop mount read-only, numeric owners, xattrs, ACLs) |
+| `scripts/extract_rootfs.sh` | yes | image → `build/armbian/rootfs-<release>.tar.zst` (+ `.sha256`, `.packages.txt` with the exact Debian package versions, `rootfs-report.txt`), as root (loop mount read-only, numeric owners, xattrs, ACLs) |
 | `scripts/make_rtl8723ds_patch.sh`, `scripts/dtcheck.sh` | yes | helpers used by `prepare.sh` |
 | `armbian-build/`, `sources/` | no | reference clones for reading on Windows (the same pins); the build does not use them |
 
@@ -145,7 +145,9 @@ Moonraker, Mainsail), with the binaries or by a written offer:
   plus `rootfs/package/klipper/*.patch`, Moonraker, Mainsail, mainsail-config, HelixScreen
   and ACEPRO at the versions in their `rootfs/package/*/*.mk`, ShedNaja's extras and configs.
 - **Debian packages:** unchanged from Debian; pointing to Debian's source archive for the
-  exact versions (`dpkg -l` in the image) is the usual way, or ship the `.dsc` sources.
+  exact versions (`build/armbian/rootfs-<release>.packages.txt`, `dpkg -l` in the image) is the
+  usual way, or ship the `.dsc` sources. They are not pinned: a build takes the current trixie
+  mirror, so two builds of one commit can differ there (compare their `.packages.txt`).
 - Stock firmware parts are never in an Armbian image (only Anycubic's RTL8723DS Bluetooth
   firmware blobs, `rtl_bt/`, which need their own redistribution check).
 

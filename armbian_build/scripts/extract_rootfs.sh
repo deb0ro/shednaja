@@ -3,7 +3,8 @@
 # useremain (docs/research/armbian-rv1106.md, section 3). Nothing here touches a board.
 #   wsl -d Ubuntu-24.04 -u root -- bash armbian_build/scripts/extract_rootfs.sh [image.img]
 # Needs root (losetup/mount, file owners). Default image: the newest *.img in $AB/output/images/.
-# Writes build/armbian/rootfs-<release>.tar.zst (+ .sha256) and build/armbian/rootfs-report.txt.
+# Writes build/armbian/rootfs-<release>.tar.zst (+ .sha256, .packages.txt: Debian package versions)
+# and build/armbian/rootfs-report.txt.
 set -euo pipefail
 
 case "$(uname -s)" in
@@ -39,6 +40,10 @@ mkdir -p "$OUT"
 tarball=$OUT/rootfs-$release.tar.zst
 tar --numeric-owner --xattrs --xattrs-include='*' --acls -C "$M" -cpf - . | zstd -q -T0 -19 -o "$tarball" -f
 (cd "$OUT" && sha256sum "$(basename "$tarball")" > "$(basename "$tarball").sha256")
+# Debian packages are not pinned (the build installs from the current trixie mirror): their exact
+# versions go next to the tarball, to compare two builds or to repeat one from snapshot.debian.org
+awk '/^Package: /{p=$2} /^Version: /{v=$2} /^$/{if (p) print p, v; p=v=""} END{if (p) print p, v}' \
+	"$M/var/lib/dpkg/status" | sort > "$OUT/rootfs-$release.packages.txt"
 
 {
   echo "image:    $(basename "$img")"
