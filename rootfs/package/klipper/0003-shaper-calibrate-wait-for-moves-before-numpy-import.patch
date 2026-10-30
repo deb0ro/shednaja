@@ -1,0 +1,34 @@
+shaper_calibrate: let queued moves finish before the first numpy import
+
+On the Kobra S1 host (RV1106, one Cortex-A7) "import numpy" takes about 1 s and
+runs in the reactor. SHAPER_CALIBRATE sent right after G28 (Moonraker returns
+"ok" once the homing moves are queued) blocked the reactor for 0.82 s while the
+end of the homing was still being sent, and the MCU shut down with "Timer too
+close" (Armbian test board, 2026-10-28). Wait for the toolhead before the
+import; nothing changes once numpy is loaded or for the offline scripts
+(printer is None).
+
+--- a/klippy/extras/shaper_calibrate.py
++++ b/klippy/extras/shaper_calibrate.py
+@@ -3,7 +3,7 @@
+ # Copyright (C) 2020-2024  Dmitry Butyugin <dmbutyugin@google.com>
+ #
+ # This file may be distributed under the terms of the GNU GPLv3 license.
+-import collections, importlib, logging, math, multiprocessing, traceback
++import collections, importlib, logging, math, multiprocessing, sys, traceback
+ shaper_defs = importlib.import_module('.shaper_defs', 'extras')
+ 
+ MIN_FREQ = 5.
+@@ -66,6 +66,12 @@
+     def __init__(self, printer):
+         self.printer = printer
+         self.error = printer.command_error if printer else Exception
++        if printer is not None and 'numpy' not in sys.modules:
++            # The first numpy import takes ~1 s on a slow host and runs in the
++            # reactor: moves still queued (e.g. the end of a G28 sent just
++            # before SHAPER_CALIBRATE) would reach the MCU too late and shut
++            # it down with "Timer too close". Let them finish first.
++            printer.lookup_object('toolhead').wait_moves()
+         try:
+             self.numpy = importlib.import_module('numpy')
+         except ImportError:

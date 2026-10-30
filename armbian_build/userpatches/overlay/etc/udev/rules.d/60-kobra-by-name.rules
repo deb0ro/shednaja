@@ -1,0 +1,6 @@
+# The eMMC is partitioned by blkdevparts= on the kernel command line (U-Boot env), not GPT,
+# so udev's by-partlabel links do not exist.
+# - /dev/block/by-name/<name>: the same links as ShedNaja's S00kobra-mounts and the stock firmware
+# - /dev/disk/by-partname/<name>: for /etc/fstab. systemd makes no device units for links under
+#   /dev/block/ (reserved for MAJ:MIN), so a mount of /dev/block/by-name/... waits 90 s and fails.
+SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{PARTNAME}=="?*", SYMLINK+="block/by-name/$env{PARTNAME}", SYMLINK+="disk/by-partname/$env{PARTNAME}"

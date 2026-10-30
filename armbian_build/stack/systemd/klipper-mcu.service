@@ -1,0 +1,15 @@
+[Unit]
+Description=Klipper Linux host MCU (ShedNaja S59klipper-mcu)
+After=kobra-usb.service
+
+[Service]
+Type=forking
+PIDFile=/run/klipper_mcu.pid
+ExecStart=/usr/libexec/kobra/init/S59klipper-mcu start
+ExecStop=/usr/libexec/kobra/init/S59klipper-mcu stop
+# real-time: never in zram, the last one the OOM killer picks
+MemorySwapMax=0
+OOMScoreAdjust=-900
+
+[Install]
+WantedBy=multi-user.target

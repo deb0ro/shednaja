@@ -1,0 +1,17 @@
+[Unit]
+# DHCP with busybox udhcpc instead of systemd-networkd + systemd-resolved (~6 MB less RAM).
+# /etc/udhcpc/default.script sets address and default route and writes /etc/resolv.conf.
+# wlan0 is enabled in the image; USB Ethernet adapters start it through 60-kobra-dhcp.rules.
+Description=DHCP on %I (busybox udhcpc)
+BindsTo=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+Before=network.target
+Wants=network.target
+
+[Service]
+ExecStart=/bin/sh -c 'exec /usr/sbin/udhcpc -i %I -f -S -x hostname:$(cat /etc/hostname)'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

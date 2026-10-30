@@ -3,7 +3,8 @@
 # USB updater runs swu/shednaja_install/update.sh, which writes the slot stock is not
 # running from and boots it.
 #   bash tools/make_install_swu.sh [bundle.tar]     (default: newest in build/update)
-# Output: build/install/aGVscF9zb3Nf/update.swu - copy the aGVscF9zb3Nf folder to the root
+# Output: build/install/aGVscF9zb3Nf/update.swu (an Armbian bundle: build/install-armbian/...)
+# - copy the aGVscF9zb3Nf folder to the root
 # of a FAT32 USB stick.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -21,6 +22,8 @@ tar -xf "$BUNDLE" -C "$WORK/payload"
 cp swu/shednaja_install/update.sh "$WORK/payload/"
 ( cd "$WORK/payload" && awk '$1 == "image" {print $3}' manifest | xargs md5sum > md5sums )
 OUT=build/install/aGVscF9zb3Nf/update.swu
+# the Armbian variant gets its own folder, so the two installers are not mixed up
+case "$(tar -xOf "$BUNDLE" manifest)" in *variant=armbian*) OUT=build/install-armbian/aGVscF9zb3Nf/update.swu ;; esac
 bash tools/make_swu.sh "$WORK/payload" "$OUT"
 rm -rf "$WORK"
 echo "installer for $(tar -xOf "$BUNDLE" manifest | sed -n 's/^build_id=//p'): $OUT"

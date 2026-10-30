@@ -5,10 +5,15 @@
 
 PD=/useremain/shednaja/printer_data
 PIDFILE=/run/moonraker.pid
+# Moonraker buffers every upload in the temp directory before moving it into place; /tmp is a
+# small tmpfs in RAM (117 MB on the Armbian variant), too small for an update bundle or a big
+# G-code file, so its temp files go to useremain (emptied at each start).
+TMP=/useremain/shednaja/tmp
 
 start() {
 	/usr/libexec/kobra/printer-data-init || return 1
-	HOME=/root PYTHONPATH=/usr/lib/moonraker \
+	mkdir -p $TMP && rm -rf $TMP/* $TMP/.[!.]* 2>/dev/null
+	TMPDIR=$TMP HOME=/root PYTHONPATH=/usr/lib/moonraker \
 	start-stop-daemon -S -q -b -m -p $PIDFILE -N 5 -x /usr/bin/python3 -- \
 		-m moonraker -d $PD
 }

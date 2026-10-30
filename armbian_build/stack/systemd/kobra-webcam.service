@@ -1,0 +1,15 @@
+[Unit]
+Description=Camera (mjpg-streamer) (ShedNaja S65webcam)
+After=kobra-usb.service useremain-shednaja.mount
+Wants=kobra-usb.service
+
+[Service]
+Type=forking
+PIDFile=/run/webcam.pid
+ExecStart=/usr/libexec/kobra/init/S65webcam start
+ExecStop=/usr/libexec/kobra/init/S65webcam stop
+# the first to go under memory pressure (nothing depends on it)
+OOMScoreAdjust=500
+
+[Install]
+WantedBy=multi-user.target

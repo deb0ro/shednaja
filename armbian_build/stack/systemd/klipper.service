@@ -1,0 +1,16 @@
+[Unit]
+Description=Klipper (ShedNaja S60klipper)
+After=klipper-mcu.service kobra-data-seed.service useremain-shednaja.mount
+Wants=klipper-mcu.service
+
+[Service]
+Type=forking
+PIDFile=/run/klippy.pid
+ExecStart=/usr/libexec/kobra/init/S60klipper start
+ExecStop=/usr/libexec/kobra/init/S60klipper stop
+# real-time: never in zram, the last one the OOM killer picks (lighter processes go first)
+MemorySwapMax=0
+OOMScoreAdjust=-900
+
+[Install]
+WantedBy=multi-user.target

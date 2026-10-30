@@ -24,9 +24,10 @@
 - Config on installed printers: test `kobra-config-migrate` on the development printer
   (its copies may predate the public history and then count as edited: `--force`), and
   check Mainsail with the read-only `config/shednaja/` link.
-- Maskrom: test whether SW1 on the upper board pulls SARADC_IN0 low (read
-  `in_voltage0_raw` while pressing it), find the RV1106 USB OTG lines (the SoC USB goes
-  through the GL850G hub; "USB" test pads on the back of the upper board).
+- Maskrom: SW1 pulls SARADC_IN0 to 0 V (measured 2026-10-27, docs/hardware.md). Still open:
+  find the RV1106 USB OTG lines (the SoC USB goes through gpio41 "usb sel" to the GL852G hub
+  U11, upstream DM0/DP0 = QFN pins 1/2; "USB" pads on the back of the upper board), then power on with SW1 held and the pads on a PC: does
+  `2207:110c` (maskrom/loader) appear?
 - ACE Pro: driver (`kobra-acepro`, inactive), T0-T3 macros, Spoolman per slot.
 - A/B update variant with our system in both slots.
 - Recovery without network: a way back to stock when ShedNaja boots but neither the web UI,

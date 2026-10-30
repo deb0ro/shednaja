@@ -1,0 +1,11 @@
+#!/bin/sh
+# Mark the running A/B slot as booted (as ShedNaja's S99kobra-bootok): re-arm its 7 tries so SPL
+# keeps booting it. Without this SPL counts the tries down and falls back to the other slot.
+case " $(cat /proc/cmdline) " in
+	*" root=/dev/mmcblk0p8 "*) slot=a ;;
+	*" root=/dev/mmcblk0p9 "*) slot=b ;;
+	*) echo "kobra-bootok: running slot unknown, not marking" >&2; exit 1 ;;
+esac
+/usr/local/sbin/kobra-abctl now --slot="$slot" && /usr/local/sbin/kobra-abctl display
+# A/B of the Debian root on useremain: a root on trial (TRY) that got this far becomes ACTIVE
+/usr/local/sbin/kobra-ab confirm

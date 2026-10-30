@@ -1,0 +1,11 @@
+[Unit]
+Description=USB hub power (GPIO1_B1) (ShedNaja S25kobra-usb)
+After=systemd-udevd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/kobra/init/S25kobra-usb start
+
+[Install]
+WantedBy=multi-user.target

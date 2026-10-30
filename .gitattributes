@@ -12,3 +12,5 @@
 *.diff text eol=lf
 *.txt text eol=lf
 *.dtb binary
+# Armbian userpatches run under Linux (board .csc, .conf, .yaml, udev rules): always LF
+armbian_build/** text eol=lf

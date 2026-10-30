@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Anycubic Kobra S1 host board, Armbian (Rockchip BSP 6.1) variant: the shared
+ * kernel/dts/rv1106g-kobra-s1.dts plus mainline Bluetooth. The 5.10 build keeps Rockchip's
+ * bluetooth-platdata + Realtek's vendor hci_uart.ko/rtk_hciattach; 6.1 uses serdev + hci_h5 +
+ * btrtl (CONFIG_BT_HCIUART_3WIRE/RTL), firmware rtl_bt/rtl8723ds_{fw,config}.bin (from stock).
+ */
+
+#include "rv1106g-kobra-s1.dts"
+
+/ {
+	model = "Anycubic Kobra S1 (RV1106G3, Armbian)";
+};
+
+/*
+ * CMA for the display only (VOP without IOMMU: 800x480 XRGB buffers, ~1.5 MB each) and not
+ * "inactive": unused CMA pages serve movable allocations instead of being lost to the system
+ * (215 MB total). The 5.10 build keeps 16 MB inactive + 18 MB rk_dma_heap_cma for the ISP chain;
+ * the RK CMA heap is not built here (UVC camera, no rockit/ISP), so that bootarg reserves nothing.
+ */
+&{/reserved-memory/linux,cma} {
+	/delete-property/ inactive;
+	size = <0x800000>;
+};
+
+/*
+ * Hardware watchdog for the A/B of kernel + root: systemd starts and pings it (RuntimeWatchdogSec);
+ * the loader starts it right before kexec and it keeps running across it, so a kernel that hangs
+ * resets the board and the loader's tries roll back. Disabled in stock and in the 5.10 build.
+ */
+&wdt {
+	status = "okay";
+};
+
+/* the vendor rfkill-bt platdata would drive the same reset GPIO (GPIO0_A4) and RTS pin */
+&{/wireless_bluetooth} {
+	status = "disabled";
+};
+
+/* UART1 m0 to the RTL8723DS BT part, H5 with hardware flow control */
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1m0_xfer &uart1m0_ctsn &uart1m0_rtsn>;
+	uart-has-rtscts;
+	status = "okay";
+
+	bluetooth {
+		compatible = "realtek,rtl8723ds-bt";
+		/* BT_REG_ON: "BT,reset_gpio" of the stock platdata, active high */
+		enable-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
+	};
+};

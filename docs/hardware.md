@@ -14,9 +14,11 @@ camera, light, buzzer, ACE Pro) and their pins: [peripherals.md](peripherals.md)
 | J1 | 3-pin `GND RX TX` | **Serial console: UART2 (GPIO1_B2/B3), 3.3 V, 115200 Bd.** The DDR blob prints to it; SPL and U-Boot are silent. The stock kernel has its console off; ShedNaja's kernel logs to it from the first line and runs a getty (FIQ debugger, `ttyFIQ0`) |
 | J5 | FPC | 800×480 RGB display + FocalTech touch (I2C3, `fts_ts` @0x38) |
 | J6 | harness to the lower board | power for the host board and signals from the lower board (pinout not traced) |
-| SW1 | tact switch next to the SoC | unknown; maybe recovery/maskrom (TODO: read `in_voltage0_raw` of SARADC channel 0 while pressing it) |
+| SW1 | tact switch next to the SoC | **pulls SARADC_IN0 to 0 V** (measured 2026-10-27: channel 0 1023 → 0 while pressed, 1.80 V → 0 V; channel 1 stays at ~1.15 V): the Rockchip recovery/download key. Not yet tried at power-on with USB to a PC |
 | U11 | QFN, left side | not identified |
-| Back | `USB` silkscreen, test points | the SoC's only USB2 port (host mode) feeds a GL850G hub (camera, rear USB/ACE); the lines needed for maskrom are not traced yet |
+| Back | `USB` silkscreen next to TP7, two square pads near R31, test points | the SoC's only USB2 port (host mode) feeds the hub U11 (camera, rear USB/ACE); the lines needed for maskrom are not traced yet |
+| U11 | USB hub **GL852G**, QFN-28 (marking; earlier notes said GL850G, both enumerate as `05e3:0610`) | upstream port to the SoC on **pin 1 = DM0, pin 2 = DP0**; pins count counter-clockwise from the dot, pin 28 = V33 (3.3 V out) is the other pin at the dot corner. Datasheet: `reference/datasheets/GL852G_Datasheet_Rev1.32.pdf` (Table 3.2) |
+| gpio41 (GPIO1_B1) | "usb sel" in Anycubic's `run.sh` | 0 (reset default): hub and camera gone, only the root hub; 1: hub + camera enumerate (2026-10-27, Armbian). A USB switch (SoC USB → hub or elsewhere) or the hub's power: not measured |
 
 Host GPIOs used by ShedNaja: gpio41 (GPIO1_B1) USB switch, gpio116 (GPIO3_C4) MCU reset,
 gpio117 (GPIO3_C5) chamber light, PWM0 (GPIO1_A2) buzzer, PWM1 backlight.
@@ -73,7 +75,7 @@ stepper + TMC2209, hotend heater and thermistor, part and hotend fans, CS1237 lo
 
 ## Open questions
 
-- SW1: recovery / maskrom button?
+- SW1 at power-on: rockusb/maskrom over USB? (SW1 itself is SARADC_IN0, see above)
 - Maskrom over USB (`2207:110c`): where the SoC's USB D+/D− can be reached before the hub.
 - gpio118 (toggled by stock together with the MCU reset) and an input GPIO watched by the
   stock UI: not identified.
