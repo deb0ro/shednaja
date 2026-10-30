@@ -20,7 +20,8 @@
 HERE=$(cd "$(dirname "$0")" && pwd)
 USB=/mnt/udisk
 LOG=$USB/shednaja-install.log
-[ -d $USB ] || LOG=/useremain/shednaja-install.log
+# stock keeps an empty read-only /mnt/udisk when no stick is mounted (run over SSH)
+{ [ -d $USB ] && touch "$LOG"; } 2>/dev/null || LOG=/useremain/shednaja-install.log
 
 beep() {  # beep <count> <on-usec>
     i=0
@@ -111,11 +112,13 @@ if [ "$VARIANT" = armbian ]; then
             grep -qxF "BUILD_ID=$BID" $A/root_$act/etc/os-release 2>/dev/null; then
         STAGE_ROOT=0; echo "Armbian root_$act already has build $BID: only the slot is switched"
     else
-        set -- $(df -k /useremain | sed -n '$p')
-        avail=$(($4 * 1024)); need=$((ROOTFS_SIZE * 4))
+        # -P: stock busybox df wraps the long device name onto its own line otherwise
+        set -- $(df -kP /useremain | sed -n '$p')
+        # in KiB: stock busybox test is 32-bit, byte counts above 2 GiB are "out of range"
+        avail=$4; need=$((ROOTFS_SIZE * 4 / 1024))
         [ "$avail" -ge "$need" ] ||
-            fail "not enough space on useremain for the Armbian root: $avail B free, $need B needed (delete print files or timelapses on stock)"
-        echo "useremain: $avail B free, $need B needed"
+            fail "not enough space on useremain for the Armbian root: $avail KiB free, $need KiB needed (delete print files or timelapses on stock)"
+        echo "useremain: $avail KiB free, $need KiB needed"
     fi
 fi
 
