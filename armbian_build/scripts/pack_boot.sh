@@ -46,7 +46,7 @@ echo "decompressed kernel $dsize B of max $dmax B ($(( (dmax - dsize) / 1024 )) 
 mkdir -p "$OUT"
 cp "$zimage" "$OUT/zImage"; cp "$dtb" "$OUT/$DTB_NAME"
 cp "$T"/boot/config-* "$OUT/config" 2>/dev/null || true
-python3 -I "$ROOT/tools/mkboot_kernel.py" --logo "$ROOT/kernel/logo/boot_logo.bmp" \
+python3 -I "$ROOT/tools/mkboot_kernel.py" --logo "$ROOT/kernel/logo/boot_logo_armbian.bmp" \
   "$TEMPLATE" "$OUT/zImage" "$OUT/$DTB_NAME" "$OUT/boot.img"
 echo "kernel: $(basename "$zimage") from $(basename "$deb")"
 (cd "$OUT" && sha256sum boot.img zImage "$DTB_NAME" | tee SHA256SUMS)
