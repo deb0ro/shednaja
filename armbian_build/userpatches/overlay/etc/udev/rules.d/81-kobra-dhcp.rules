@@ -1,0 +1,7 @@
+# DHCP (kobra-dhcp@.service) on USB Ethernet adapters; wlan0's instance is enabled in the image.
+# After 80-net-setup-link.rules: there the adapter gets its final name (eth0 -> enx<mac>), and
+# $name is that name (%k in an earlier rule is still eth0: the unit wanted kobra-dhcp@eth0).
+# Not only on "add": the rename sends a "move" right after it, and systemd takes the device's
+# properties from that event, so without SYSTEMD_WANTS there DHCP never started on hotplug.
+# ID_BUS=usb: not the unused on-board GMAC (end0).
+SUBSYSTEM=="net", ACTION!="remove", ENV{ID_BUS}=="usb", TAG+="systemd", ENV{SYSTEMD_WANTS}+="kobra-dhcp@$name.service"
