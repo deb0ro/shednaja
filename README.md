@@ -124,8 +124,13 @@ themselves in WSL when started from Git Bash). About 15 GB of disk space.
 ```
 sudo apt install build-essential git curl unzip zip python3 python3-pip bc rsync cpio \
     file wget squashfs-tools e2fsprogs device-tree-compiler libssl-dev openssl flex bison \
-    u-boot-tools qemu-user-static
+    u-boot-tools qemu-user-static kmod python-is-python3
 ```
+
+`kmod` provides `depmod`: without it `make modules_install` only warns, the image has no
+`modules.dep`, `modprobe` cannot load the Wi-Fi driver and ShedNaja boots without `wlan0`.
+`python-is-python3` provides the `python` command the kernel build calls. Minimal
+environments (e.g. the `ubuntu:24.04` Docker image) have neither.
 
 ```
 bash tools/fetch_stock.sh             # stock boot image (layout template), MCU dictionary -> build/stock/
