@@ -1,6 +1,8 @@
 [Unit]
 Description=HelixScreen (ShedNaja S70helixscreen)
 After=moonraker.service
+# the data copy must be mounted: without it /useremain/shednaja is Lite's own data
+RequiresMountsFor=/useremain/shednaja
 
 [Service]
 Type=forking

@@ -1,6 +1,8 @@
 [Unit]
 Description=Moonraker (ShedNaja S61moonraker)
 After=klipper.service network.target useremain-shednaja.mount
+# the data copy must be mounted: without it /useremain/shednaja is Lite's own data
+RequiresMountsFor=/useremain/shednaja
 
 [Service]
 Type=forking

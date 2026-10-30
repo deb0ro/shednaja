@@ -2,6 +2,8 @@
 Description=Klipper (ShedNaja S60klipper)
 After=klipper-mcu.service kobra-data-seed.service useremain-shednaja.mount
 Wants=klipper-mcu.service
+# the data copy must be mounted: without it /useremain/shednaja is Lite's own data
+RequiresMountsFor=/useremain/shednaja
 
 [Service]
 Type=forking

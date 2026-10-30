@@ -4,6 +4,8 @@ Description=Update from a USB stick at boot (ShedNaja S27kobra-usbupdate)
 After=kobra-usb.service useremain-shednaja.mount
 Wants=kobra-usb.service
 Before=klipper.service moonraker.service helixscreen.service
+# the data copy must be mounted: without it /useremain/shednaja is Lite's own data
+RequiresMountsFor=/useremain/shednaja
 
 [Service]
 Type=oneshot
