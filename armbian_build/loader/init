@@ -87,24 +87,56 @@ ab_write() {
 }
 has_init() { [ -e "$1/sbin/init" ] || [ -L "$1/sbin/init" ]; }
 # First install (from stock: the USB installer, from Lite: kobra-update --to-armbian): the
-# installers write boot/system and leave the root as $AB/install/rootfs.tar.gz, with this
-# board's identity from Lite (install/dropbear/*, install/root.hash) if there is one. Unpacked
-# here with our busybox (stock's tar cannot keep numeric owners), becomes root_a.
+# installers write boot/system and leave the root as $AB/install/rootfs.tar.gz (+ BUILD_ID),
+# with this board's identity from Lite (install/dropbear/*, install/root.hash) if there is one.
+# Unpacked here with our busybox (stock's tar cannot keep numeric owners).
+# Coming back to an Armbian that is already installed (REBOOT_TO_STOCK, then the installer stick
+# again) must not lose it: the same build as the ACTIVE root is not unpacked again, another one
+# goes into the other slot as a root on trial (TRY, rolls back to ACTIVE), and the board's
+# identity (root password and keys, SSH host keys, machine-id) comes from the ACTIVE root when
+# Lite left none. Only a board without an Armbian root gets root_a as ACTIVE directly.
+ident_from() {	# ident_from <root>: the board identity of an installed root into $N
+	h=$(sed -n 's/^root:\([^:]*\):.*/\1/p' "$1/etc/shadow")
+	[ -n "$h" ] && sed -i "s|^root:[^:]*:|root:$h:|" $N/etc/shadow
+	[ -f "$1/root/.ssh/authorized_keys" ] && mkdir -p $N/root/.ssh && cp -a "$1/root/.ssh/authorized_keys" $N/root/.ssh/
+	for f in "$1"/etc/dropbear/dropbear_*_host_key "$1"/etc/ssh/ssh_host_*; do
+		[ -f "$f" ] && mkdir -p "$(dirname "$N${f#"$1"}")" && cp -a "$f" "$N${f#"$1"}"
+	done
+	for f in machine-id fake-hwclock.data; do [ -f "$1/etc/$f" ] && cp -a "$1/etc/$f" $N/etc/; done
+}
 if [ -f $AB/install/rootfs.tar.gz ]; then
-	I=$AB/install; N=$AB/root_a.new
-	log "first install: unpacking $(wc -c < $I/rootfs.tar.gz) B into root_a (a few minutes)"
-	rm -rf $N; mkdir -p $N
-	if gzip -dc $I/rootfs.tar.gz | tar -x --numeric-owner -f - -C $N && has_init $N; then
-		[ -d $I/dropbear ] && mkdir -p $N/etc/dropbear && cp $I/dropbear/* $N/etc/dropbear/
-		[ -f $I/root.hash ] && sed -i "s|^root:[^:]*:|root:$(cat $I/root.hash):|" $N/etc/shadow
-		[ -f $I/BUILD_ID ] && echo "BUILD_ID=$(cat $I/BUILD_ID)" >> $N/etc/os-release
-		rm -rf $AB/root_a; mv $N $AB/root_a
-		ACTIVE=a; TRY=; TRIES=0; ab_write
+	I=$AB/install
+	ibid=$(cat $I/BUILD_ID 2>/dev/null)
+	case "$ibid" in *[!A-Za-z0-9._+-]*) ibid= ;; esac	# a plain build id or none
+	keep=; has_init $AB/root_$ACTIVE && keep=$ACTIVE
+	if [ -n "$keep" ] && [ -n "$ibid" ] && grep -qxF "BUILD_ID=$ibid" $AB/root_$keep/etc/os-release; then
+		log "first install: root_$keep already has build $ibid, keeping it (only the slot was switched)"
 		rm -rf $I; sync
-		log "first install: root_a ready"
 	else
-		rm -rf $N; sync
-		to_stock "first install: the root in $I/rootfs.tar.gz does not unpack"
+		t=a; [ "$keep" = a ] && t=b
+		N=$AB/root_$t.new
+		log "first install: unpacking $(wc -c < $I/rootfs.tar.gz) B into root_$t (a few minutes)"
+		rm -rf $N; mkdir -p $N
+		if gzip -dc $I/rootfs.tar.gz | tar -x --numeric-owner -f - -C $N && has_init $N; then
+			[ -n "$keep" ] && ident_from $AB/root_$keep
+			[ -d $I/dropbear ] && mkdir -p $N/etc/dropbear && cp $I/dropbear/* $N/etc/dropbear/
+			[ -f $I/root.hash ] && sed -i "s|^root:[^:]*:|root:$(cat $I/root.hash):|" $N/etc/shadow
+			[ -n "$ibid" ] && echo "BUILD_ID=$ibid" >> $N/etc/os-release
+			rm -rf $AB/root_$t; mv $N $AB/root_$t
+			if [ -n "$keep" ]; then
+				TRY=$t; TRIES=3; ab_write
+				log "first install: root_$t ready, on trial (root_$keep stays ACTIVE until it confirms)"
+			else
+				ACTIVE=$t; TRY=; TRIES=0; ab_write
+				log "first install: root_$t ready"
+			fi
+			rm -rf $I; sync
+		else
+			rm -rf $N; sync
+			[ -n "$keep" ] || to_stock "first install: the root in $I/rootfs.tar.gz does not unpack"
+			rm -rf $I; sync
+			log "first install: the new root does not unpack, booting root_$keep as before"
+		fi
 	fi
 fi
 # first boot after the single-root test install: its root becomes slot a

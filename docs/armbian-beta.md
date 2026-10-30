@@ -81,8 +81,10 @@ Updates are refused while a print is running or paused.
 
 - **To the previous version:** macro `ROLLBACK_SYSTEM` (Mainsail, HelixScreen), or
   `kobra-ab rollback` over SSH.
-- **To stock:** macro `REBOOT_TO_STOCK`. Back from stock: the Armbian installer stick again
-  (only the slot switch and a fresh root; your printer data stays).
+- **To stock:** macro `REBOOT_TO_STOCK`. Back from stock: the Armbian installer stick again.
+  With the build that is installed it only switches the slot; with another build the new
+  root is tried next to the installed one and replaces it only once it has come up (else the
+  installed one comes back). Printer data, root password and SSH keys stay.
 - **To Lite:** a Lite update bundle with `kobra-update --to-lite <shednaja-update-<id>.tar>`
   over SSH. Lite starts with its own, older data (the configuration from before Armbian).
 - **Removing Armbian's files** once you are back on Lite or stock for good (about 1.5 GB):

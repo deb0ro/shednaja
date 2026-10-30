@@ -1,10 +1,18 @@
 #!/bin/bash
 # Offline test of the loader's A/B selection (the "A/B of the Debian root" block of loader/init),
 # run with the loader's own busybox under qemu-arm. Usage (WSL): bash armbian_build/loader/test_ab.sh
+# Without a Buildroot target (CI) it runs with the host's busybox (busybox-static) instead.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 T=${BR_OUT:-$HOME/kobra/rootfs-out}/target
-Q=$(command -v qemu-arm-static || command -v qemu-arm)
+Q=$(command -v qemu-arm-static || command -v qemu-arm || true)
+if [ -x "$T/bin/busybox" ] && [ -n "$Q" ]; then
+	BB=("$Q" -L "$T" "$T/bin/busybox")
+elif command -v busybox > /dev/null; then
+	BB=("$(command -v busybox)"); echo "(no Buildroot target: the host's busybox runs the loader blocks)"
+else
+	echo "needs the Buildroot target ($T) with qemu-arm, or busybox on the host" >&2; exit 1
+fi
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 
 # the block from "# ---- A/B" up to the line that sets R, AB pointed at the test dir
@@ -40,7 +48,7 @@ mkroot() { mkdir -p "$1/sbin"; ln -sf ../lib/systemd/systemd "$1/sbin/init"; }
 state() { mkdir -p "$TESTAB/ab"; printf 'ACTIVE=%s\nTRY=%s\nTRIES=%s\n' "$1" "$2" "$3" > "$TESTAB/ab/state"; }
 check() {  # check <name> <expected output regex> <expected state or ->
 	local out st
-	out=$(TESTAB=$TESTAB "$Q" -L "$T" "$T/bin/busybox" sh "$W/run.sh" "$W/block.sh" 2>&1)
+	out=$(TESTAB=$TESTAB "${BB[@]}" sh "$W/run.sh" "$W/block.sh" 2>&1)
 	st=$( { tr '\n' ' ' < "$TESTAB/ab/state"; } 2>/dev/null || echo "-")
 	if grep -qE "$2" <<< "$out" && { [ "$3" = - ] || [ "$st" = "$3" ]; }; then
 		echo "ok   $1"
@@ -98,11 +106,53 @@ check "first install from install/rootfs.tar.gz -> root_a" "first install: root_
 new 16; mkdir -p "$TESTAB/install"; echo garbage > "$TESTAB/install/rootfs.tar.gz"
 check "first install with a broken archive -> stock" "TO_STOCK: first install" -
 
+# back to an Armbian that is installed already (REBOOT_TO_STOCK, then the installer stick)
+installed() {	# installed <root dir> <build id>: a confirmed root with this board's identity
+	mkroot "$1"; mkdir -p "$1/etc/dropbear" "$1/root/.ssh"
+	echo 'root:BOARDHASH:1::::::' > "$1/etc/shadow"; printf 'ID=debian\nBUILD_ID=%s\n' "$2" > "$1/etc/os-release"
+	echo boardkey > "$1/etc/dropbear/dropbear_ed25519_host_key"; echo boardid > "$1/etc/machine-id"
+	echo 'ssh-ed25519 AAAA owner' > "$1/root/.ssh/authorized_keys"
+}
+stick() {	# stick <build id> [lite]: what an installer leaves in install/
+	mkdir -p "$TESTAB/install"; tar -czf "$TESTAB/install/rootfs.tar.gz" -C "$W/r15" .
+	echo "$1" > "$TESTAB/install/BUILD_ID"
+	[ "${2:-}" = lite ] && echo LITEHASH > "$TESTAB/install/root.hash"
+	true
+}
+new 17; installed "$TESTAB/root_a" old1; state a "" 0; stick new2
+check "installed root_a, stick with another build -> root_b on trial" "BOOT: armbian/root_b$" "ACTIVE=a TRY=b TRIES=2 "
+{ grep -q '^root:BOARDHASH:' "$TESTAB/root_b/etc/shadow" && grep -q '^BUILD_ID=new2$' "$TESTAB/root_b/etc/os-release" &&
+  [ "$(cat "$TESTAB/root_b/etc/dropbear/dropbear_ed25519_host_key")" = boardkey ] &&
+  [ "$(cat "$TESTAB/root_b/etc/machine-id")" = boardid ] && [ -f "$TESTAB/root_b/root/.ssh/authorized_keys" ] &&
+  grep -q '^BUILD_ID=old1$' "$TESTAB/root_a/etc/os-release" && [ ! -e "$TESTAB/install" ]; } ||
+	{ echo "FAIL identity / old root after the trial install"; fail=1; }
+check "... not confirmed 3 times -> back to root_a" "BOOT: armbian/root_b$" "ACTIVE=a TRY=b TRIES=1 "
+check "..." "BOOT: armbian/root_b$" "ACTIVE=a TRY=b TRIES=0 "
+check "..." "BOOT: armbian/root_a$" "ACTIVE=a TRY= TRIES=0 "
+
+new 18; installed "$TESTAB/root_b" same9; installed "$TESTAB/root_a" older; state b "" 0; stick same9
+check "stick with the build root_b (ACTIVE) has -> kept, nothing unpacked" "already has build same9" "ACTIVE=b TRY= TRIES=0 "
+{ [ ! -e "$TESTAB/install" ] && grep -q '^BUILD_ID=older$' "$TESTAB/root_a/etc/os-release"; } ||
+	{ echo "FAIL the same build was unpacked again"; fail=1; }
+
+new 19; installed "$TESTAB/root_a" old1; state a "" 0
+mkdir -p "$TESTAB/install"; echo garbage > "$TESTAB/install/rootfs.tar.gz"
+check "installed root_a, broken stick archive -> boots root_a, no stock" "BOOT: armbian/root_a$" "ACTIVE=a TRY= TRIES=0 "
+[ ! -e "$TESTAB/install" ] && [ ! -e "$TESTAB/root_b" ] || { echo "FAIL broken archive left behind"; fail=1; }
+
+new 20; installed "$TESTAB/root_a" old1; state a "" 0; stick new2 lite
+check "from Lite onto an installed root_a -> Lite's password wins" "BOOT: armbian/root_b$" "ACTIVE=a TRY=b TRIES=2 "
+grep -q '^root:LITEHASH:' "$TESTAB/root_b/etc/shadow" || { echo "FAIL Lite's password"; fail=1; }
+
+new 21; installed "$TESTAB/root_a" old1; state a "" 0; stick 'x$(reboot)'
+check "build id with shell characters is not written" "BOOT: armbian/root_b$" -
+grep -q 'reboot' "$TESTAB/root_b/etc/os-release" && { echo "FAIL bad build id written"; fail=1; } || true
+
 # ---- kernel block ----
 kcheck() {  # kcheck <name> <expected output regex> <unexpected output regex or -> <kexec-fails or ->
 	local out kf
 	out=$(TESTAB=$TESTAB TESTHDR=$W/hdr KROOT=${KROOT:-} KEXEC_L_FAILS=${KEXEC_L_FAILS:-} \
-		"$Q" -L "$T" "$T/bin/busybox" sh "$W/run.sh" "$W/block.sh" "$W/kernel.sh" 2>&1 | tr '\n' '|')
+		"${BB[@]}" sh "$W/run.sh" "$W/block.sh" "$W/kernel.sh" 2>&1 | tr '\n' '|')
 	kf=$(cat "$TESTAB/ab/kexec-fails" 2>/dev/null || echo -)
 	if grep -qE "$2" <<< "$out" && { [ "$3" = - ] || ! grep -qE "$3" <<< "$out"; } &&
 			{ [ "$4" = - ] || [ "$kf" = "$4" ]; }; then
