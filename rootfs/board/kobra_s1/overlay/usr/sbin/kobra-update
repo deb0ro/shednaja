@@ -113,6 +113,8 @@ M=$STAGE/manifest
 [ -f "$M" ] || die "bundle has no manifest"
 grep -qx 'format=1' "$M" || die "unsupported bundle format"
 BID=$(sed -n 's/^build_id=//p' "$M")
+# the build id goes into logs, installed.manifest and (Armbian) the new root's os-release
+case "$BID" in ''|*[!A-Za-z0-9._+-]*) die "bad build_id in manifest" ;; esac
 # which variant the bundle is for, and whether that switches ours (only with --to-<variant>)
 case "$(sed -n 's/^variant=//p' "$M")" in armbian) VARIANT=armbian ;; *) VARIANT=lite ;; esac
 OURS=lite; [ "$AB" = 1 ] && OURS=armbian
@@ -176,19 +178,21 @@ if [ "$CHECK" = 1 ]; then
 	log "check only - nothing written"
 	rm -rf "$STAGE"; exit 0
 fi
-[ "$REMOVE" = 1 ] && rm -f "$BUNDLE" && log "bundle file removed (its images are staged and verified)"
 
 # ---- printer must be idle ---------------------------------------------------------
 # Klipper not running (USB update at boot, before S60): nothing can print. Klipper running:
 # the state has to be readable and not printing/paused, unless --force.
-check_idle() {
+print_state() {	# the print state; "idle" without klippy, "" when Moonraker does not say
 	# busybox: pidof/ps; Debian (Armbian): klippy runs as python3, procps ps shows only the tty
 	pidof klippy.py > /dev/null 2>&1 || ps | grep -q '[k]lippy.py' ||
-		{ command -v pgrep > /dev/null && pgrep -f klippy.py > /dev/null; } || return 0
-	state=$(wget -q -T 5 -O - "http://127.0.0.1:7125/printer/objects/query?print_stats=state" 2>/dev/null |
-		sed -n 's/.*"state": *"\([a-z]*\)".*/\1/p')
+		{ command -v pgrep > /dev/null && pgrep -f klippy.py > /dev/null; } || { echo idle; return 0; }
+	wget -q -T 5 -O - "http://127.0.0.1:7125/printer/objects/query?print_stats=state" 2>/dev/null |
+		sed -n 's/.*"state": *"\([a-z]*\)".*/\1/p'
+}
+check_idle() {
+	state=$(print_state)
 	case "$state" in
-		standby|complete|cancelled|error) return 0 ;;
+		idle|standby|complete|cancelled|error) return 0 ;;
 		printing|paused) msg="printer is $state - finish or cancel the print first" ;;
 		*) msg="cannot read the print state from Moonraker" ;;
 	esac
@@ -202,6 +206,8 @@ if [ "$YES" != 1 ]; then
 	read -r a; case "$a" in y|Y|yes) ;; *) log "aborted by user"; exit 1 ;; esac
 	check_idle	# a print may have started while the question was open
 fi
+# only now: a refusal above (a print started, no confirmation) keeps the uploaded bundle
+[ "$REMOVE" = 1 ] && rm -f "$BUNDLE" && log "bundle file removed (its images are staged and verified)"
 
 # ---- Armbian variant: install while running, then reboot ---------------------------
 # The root goes into the inactive directory (the running one is not touched); boot/system
@@ -233,10 +239,12 @@ if [ "$AB" = 1 ]; then
 	cp "$M" "$UPD/installed.manifest"
 	rm -rf "$STAGE"; OWN_STAGE=0
 	# Klipper kept running while the root was installed: no reboot into a print started meanwhile
-	if ! (check_idle) > /dev/null 2>&1; then
-		log "update $BID installed; the printer is busy, so the new system starts at the next restart"
-		exit 0
-	fi
+	# (also with --force: that only allowed the install, a reboot would end the print)
+	case "$(print_state)" in
+		idle|standby|complete|cancelled|error) ;;
+		*) log "update $BID installed; the printer is busy (or its state unknown), so the new system starts at the next restart"
+		   exit 0 ;;
+	esac
 	log "update $BID installed, rebooting (the new root is tried, then confirmed or rolled back)"
 	sync; systemctl reboot
 	exit 0
