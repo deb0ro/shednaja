@@ -20,6 +20,10 @@ WORK=$(mktemp -d)
 mkdir -p "$WORK/payload"
 tar -xf "$BUNDLE" -C "$WORK/payload"
 cp swu/shednaja_install/update.sh "$WORK/payload/"
+# the installer checks the images with md5 (stock's busybox has no sha256sum): the md5 sums
+# are made from images that match the manifest's sha256, so the two can never disagree
+( cd "$WORK/payload" && awk '$1 == "image" {print $5 "  " $3}' manifest | sha256sum -c --quiet ) ||
+	{ echo "$BUNDLE: an image does not match the sha256 in its manifest"; rm -rf "$WORK"; exit 1; }
 ( cd "$WORK/payload" && awk '$1 == "image" {print $3}' manifest | xargs md5sum > md5sums )
 OUT=build/install/aGVscF9zb3Nf/update.swu
 # the Armbian variant gets its own folder, so the two installers are not mixed up
