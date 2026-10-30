@@ -283,7 +283,7 @@ path, stock slot, `userdata`, the existing data on `useremain` and the MCU firmw
   - Klipper protection (no RAM change): `klipper` and `klipper-mcu` with `MemorySwapMax=0` (cgroup v2
     `memory.swap.max` = 0, never in zram) and `OOMScoreAdjust=-900`; Moonraker 300, HelixScreen 200,
     camera 500 (killed first). Swappiness stays 60 (zram).
-  - Network: busybox `udhcpc` (`kobra-dhcp@wlan0`, 0.5 MB; USB Ethernet via `60-kobra-dhcp.rules`)
+  - Network: busybox `udhcpc` (`kobra-dhcp@wlan0`, 0.5 MB; USB Ethernet via `81-kobra-dhcp.rules`; checked with an AX88179 adapter, 2026-10-30)
     instead of systemd-networkd + systemd-resolved; `NETWORKING_STACK=none` (Armbian's networkd stack
     pulls netplan, whose generator re-enables networkd every boot). → **143.8 MB (+5.7)**. udhcpc
     identifies by MAC like stock/Lite: the board is now **192.168.10.247** (networkd's DUID got .248).
