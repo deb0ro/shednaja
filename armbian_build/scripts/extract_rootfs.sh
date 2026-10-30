@@ -17,7 +17,7 @@ esac
 
 [ "$(id -u)" = 0 ] || { echo "needs root (wsl -u root)" >&2; exit 1; }
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-AB=${AB:-/home/adam/kobra/armbian-build}
+AB=${AB:-$HOME/kobra/armbian-build}
 OUT=$ROOT/build/armbian
 
 img=${1:-$(ls -t "$AB"/output/images/*.img 2>/dev/null | head -1)}
