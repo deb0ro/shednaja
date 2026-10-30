@@ -161,6 +161,10 @@ rm -rf "$MODROOT"
 for ext in "$WOUT" "$BOUT"; do
   "${M[@]}" -s M="$ext" INSTALL_MOD_PATH="$MODROOT" INSTALL_MOD_STRIP=1 INSTALL_MOD_DIR=extra modules_install
 done
+# without depmod modules_install only warns: no modules.dep, modprobe cannot load the
+# Wi-Fi driver and the printer boots without wlan0
+grep -q '^extra/RTL8723DS.ko:' "$MODROOT/lib/modules/$rel/modules.dep" 2>/dev/null ||
+  { echo "no RTL8723DS in modules.dep: depmod missing? (sudo apt install kmod)"; exit 1; }
 # same files flat, as the stock userspace expects them in /oem/usr/ko/
 rm -rf "$OUT/oem-ko"; mkdir -p "$OUT/oem-ko"
 cp "$MODROOT/lib/modules/$rel/extra/RTL8723DS.ko" "$MODROOT/lib/modules/$rel/extra/hci_uart.ko" \
