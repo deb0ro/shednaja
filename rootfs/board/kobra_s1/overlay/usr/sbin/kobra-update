@@ -78,7 +78,9 @@ die() { log "ERROR: $*"; exit 1; }
 # The staged images (tens of MB on /useremain) go when this run ends without handing them
 # over; only the ones this run unpacked, never those of a running or handed-over update.
 OWN_STAGE=0
-trap '[ "$OWN_STAGE" = 1 ] && rm -rf "$STAGE"' EXIT
+# Armbian: an exit while "Updating firmware" is shown (an error, a signal) shows "failed"
+# and brings HelixScreen back
+trap '[ "${SCREEN:-0}" = 1 ] && screen_end failed; [ "$OWN_STAGE" = 1 ] && rm -rf "$STAGE"' EXIT
 trap 'exit 130' INT TERM HUP
 
 mountpoint -q /useremain || die "/useremain not mounted"
@@ -214,6 +216,27 @@ fi
 # hold only the base kernel and the loader squashfs, which nothing reads after the loader's
 # pivot_root (its old root is detached first).
 if [ "$AB" = 1 ]; then
+	# The display shows "Updating firmware" while the root is installed (Lite's update-stage2
+	# does the same at its handover): HelixScreen and its watchdog stop, fb0 is unblanked and
+	# panned (at boot, from the USB stick, HelixScreen has not started yet and the panel still
+	# scans out the U-Boot logo), then "done" before the reboot, or "failed" and HelixScreen
+	# back. Frames from tools/make_update_splash.py (Armbian variant).
+	screen() {
+		f=/usr/share/shednaja/splash/$1.fb.gz
+		[ -f "$f" ] && [ -e /dev/fb0 ] || return 0
+		echo 0 > /sys/class/backlight/backlight/bl_power 2>/dev/null
+		echo 0 > /sys/class/graphics/fb0/blank 2>/dev/null
+		echo 0,0 > /sys/class/graphics/fb0/pan 2>/dev/null
+		zcat "$f" > /dev/fb0 2>/dev/null
+	}
+	screen_end() {	# screen_end done|failed: show it 3 s; HelixScreen back unless we reboot
+		screen "$1"; sleep 3
+		[ "$HELIX" = 1 ] && [ "${2:-}" != reboot ] && systemctl start helixscreen.service
+		SCREEN=0
+	}
+	HELIX=0; systemctl -q is-active helixscreen.service && HELIX=1
+	[ "$HELIX" = 1 ] && systemctl stop helixscreen.service
+	SCREEN=1; screen updating
 	for item in $PLAN; do
 		part=${item%%:*}; rest=${item#*:}; file=${rest%%:*}; rest=${rest#*:}; size=${rest%%:*}; sum=${rest#*:}
 		if [ "$part" = rootfs ]; then
@@ -243,9 +266,10 @@ if [ "$AB" = 1 ]; then
 	case "$(print_state)" in
 		idle|standby|complete|cancelled|error) ;;
 		*) log "update $BID installed; the printer is busy (or its state unknown), so the new system starts at the next restart"
-		   exit 0 ;;
+		   screen_end done; exit 0 ;;
 	esac
 	log "update $BID installed, rebooting (the new root is tried, then confirmed or rolled back)"
+	screen_end done reboot
 	sync; systemctl reboot
 	exit 0
 fi

@@ -28,7 +28,7 @@ SRC=${SRC:-$HOME/kobra/armbian-src}
 # ---- pins (bump together; the kernel pin is also in userpatches/config/boards/kobra-s1.csc)
 ARMBIAN_COMMIT=fac57a02f1c6ff2221a3f3099a1094dcdf41be26   # armbian/build main, 2026-10-23
 KERNEL_REPO=https://github.com/armbian/linux-rockchip.git
-KERNEL_COMMIT=d3d527fca68e0db93aa802692e82b9e3b10cef8d    # rk-6.1-rkr7.2, 2026-10-23
+KERNEL_COMMIT=fe9944f83189a6c2e07e2eee5f24e60a1241b628    # rk-6.1-rkr7.2, 2026-11-10
 RTL8723DS_COMMIT=b5c8a00c52918c2f98c000551b0c5fc5e365f87e # armbian/rtl8723ds, 2026-09-09 (= Armbian's harness pin)
 
 log() { echo "== $*"; }

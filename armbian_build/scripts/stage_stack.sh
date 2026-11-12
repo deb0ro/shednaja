@@ -71,5 +71,6 @@ cp -a "$BOARD/klipper_config" "$OUT/lite/klipper_config"
 # the install script and units
 cp "$ROOT/armbian_build/stack/install-stack.sh" "$OUT/"
 cp -a "$ROOT/armbian_build/stack/systemd" "$OUT/systemd"
+cp -a "$ROOT/armbian_build/stack/splash" "$OUT/splash"
 cp "$ROOT"/armbian_build/stack/kobra-data-seed "$OUT/"
 echo "staged into $OUT ($(du -sh "$OUT" | cut -f1))"

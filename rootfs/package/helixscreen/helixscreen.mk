@@ -7,7 +7,7 @@
 # The "ad5m" release is a fully static armv7-a hard-float binary (glibc inside),
 # so it runs on our uClibc rootfs as is. Building from source needs GCC >= 10
 # (C++17, LVGL 9); the SDK toolchain is gcc 8.3. See docs/display-ui.md.
-HELIXSCREEN_VERSION = 1.0.6
+HELIXSCREEN_VERSION = 1.0.8
 HELIXSCREEN_SITE = https://github.com/prestonbrown/helixscreen/releases/download/v$(HELIXSCREEN_VERSION)
 HELIXSCREEN_SOURCE = helixscreen-ad5m-v$(HELIXSCREEN_VERSION).tar.gz
 HELIXSCREEN_LICENSE = GPL-3.0+

@@ -4,9 +4,10 @@
 #
 ################################################################################
 
-# the commit of tag v0.11.0, pinned by hash: a tag can be moved upstream
-MOONRAKER_RELEASE = v0.11.0
-MOONRAKER_VERSION = 985c1d0bbeb90bc057d34a232c9dc3b05e0c6c8d
+# master after tag v0.11.0 (revert of the strict API key handling, a status update fix),
+# pinned by hash; MOONRAKER_RELEASE is its git describe
+MOONRAKER_RELEASE = v0.11.0-4-gb559b9a
+MOONRAKER_VERSION = b559b9a81161f958a43c2f527b6ad96f73310d5d
 MOONRAKER_SITE = https://github.com/Arksine/moonraker.git
 MOONRAKER_SITE_METHOD = git
 MOONRAKER_LICENSE = GPL-3.0

@@ -71,7 +71,7 @@ touch, eMMC, the MCU UARTs and USB storage, but no Wi-Fi.
 | What | Pin |
 |---|---|
 | armbian/build | `fac57a02f1c6ff2221a3f3099a1094dcdf41be26` (main, 2026-10-23) |
-| kernel | armbian/linux-rockchip `d3d527fca68e0db93aa802692e82b9e3b10cef8d` (`rk-6.1-rkr7.2`, 2026-10-23), pinned in the `.csc` (the family follows the branch head) |
+| kernel | armbian/linux-rockchip `fe9944f83189a6c2e07e2eee5f24e60a1241b628` (`rk-6.1-rkr7.2`, 2026-11-10), pinned in the `.csc` (the family follows the branch head) |
 | RTL8723DS | armbian/rtl8723ds `b5c8a00c52918c2f98c000551b0c5fc5e365f87e` (the same commit as Armbian's harness) |
 
 Bump them together in `scripts/prepare.sh` and the `.csc`, and rerun `prepare.sh` (it checks
@@ -397,3 +397,42 @@ path, stock slot, `userdata`, the existing data on `useremain` and the MCU firmw
   first-install block) written and verified, reboot → new loader, `root_b` tried and confirmed,
   `BUILD_ID=armbian-88f494f77938`, host key and root password carried over, Klipper ready.
   Stock installer built: `build/install-armbian/aGVscF9zb3Nf/update.swu` (268 MB), not tested yet.
+- 2026-11-12, **reinstalled board, then the stack and kernel update.** The user had reinstalled
+  the board from stock with the USB stick after 2026-10-30 (stock now in slot B, Armbian in slot A).
+  That loader predated `c37e9d7`, so the stick made a fresh `root_a` (build `c0015a6`): new SSH host
+  keys (ED25519 `SHA256:SGAVpGSN…`, confirmed by the user, stored in `keys/known_hosts_shednaja`),
+  no `authorized_keys` (the user added the project key) and the default root password `rockchip`
+  (the login asks for a new one through `shednaja-password.sh`; still the default afterwards).
+  New pins: HelixScreen 1.0.8, klipper-kobra-s1 `880188ba` (`V1.3.1-54-g880188ba`, patches
+  0001–0003 apply), klipper-host-mcu the same, Moonraker `b559b9a8` (`v0.11.0-4-gb559b9a`),
+  mainsail-config `ff3869a6` (new `mainsail.cfg` sum in `known-versions.sha256`), kernel
+  `fe9944f8` (ipv4 IP options CVE fix, zswap atomic pool fix); armbian/build pin unchanged.
+  Release image (no SSH keys in it) and the full bundle `shednaja-armbian-update-armbian-30c9f1fc79cc.tar`
+  (rootfs + boot + loader with `c37e9d7`), uploaded over SSH (sha256 checked) and installed with
+  `systemd-run kobra-update --yes --remove-bundle` while Klipper was in standby: root into `root_b`,
+  `boot_a`/`system_a` written and verified, reboot in 1 min 40 s. `root_b` tried and confirmed
+  (`ACTIVE=b TRY=-`), misc A prio 15, stock B prio 14 untouched. Kernel `#1 Tue Nov 10 12:26:04 CET
+  2026` (the pinned commit), `systemctl is-system-running` = running, no failed units, Klipper ready
+  (`V1.3.1-54-g880188ba`), Moonraker `v0.11.0-4-gb559b9a`, HelixScreen `v1.0.8`, Mainsail 200,
+  webcam snapshot 200, host key, `authorized_keys` and root hash carried over, MemAvailable 152 MB.
+  No motion tested. **Lite** reads the same `.mk` pins: it needs a release build and a retest with
+  them (not built).
+- 2026-11-12, **update screens on the display.** Before, only Lite's handover drew them: on Armbian
+  HelixScreen kept its normal UI for the 3 min install, then the printer just rebooted. Now
+  `kobra-update` (Armbian path) stops HelixScreen and its watchdog, unblanks and pans fb0 and shows
+  "Updating firmware"; "Update complete" 3 s before the reboot; "Update failed" on an error or a
+  signal (EXIT trap), then HelixScreen back. Armbian has its own frames (`armbian_build/stack/splash`,
+  footer "ShedNaja", failed: "The printer keeps running the current system"). Checked by sampling
+  fb0's md5 every 2 s against the frames:
+  - SSH (`kobra-update` hot-copied into the running root first): updating at the start of the
+    install, done before the reboot, new root confirmed.
+  - Interrupted install (`systemctl stop kobra-update` during `kobra-ab install`): failed, HelixScreen
+    back. The first try found `"$2"` unset under `set -u` (HelixScreen stayed off), fixed with `${2:-}`.
+    The partial `root_b.new` it left made the next run 4 MB short of space; removed by hand.
+  - Mainsail (upload through Moonraker into `config/updates`, `_SHEDNAJA_UPDATE CONFIRM=1` as the
+    dialog's Install button sends): updating, done, reboot into `armbian-afe4a313d4ff` (the image
+    with the screens built in), confirmed, no failed units, MemAvailable 152 MB.
+  - USB stick at boot: not tested yet (needs the user).
+  `apt.armbian.com` answered 502 during the build: this image was built with
+  `LOCAL_MIRROR=mirrors.dotsrc.org/armbian-apt` (Armbian's official mirror), so its armbian.sources
+  points there. The next normal build goes back to apt.armbian.com.

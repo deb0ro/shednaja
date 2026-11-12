@@ -1,7 +1,7 @@
 # Touch display (HelixScreen)
 
 Under stock the 800×480 touch display runs Anycubic's `K3SysUi`. Under ShedNaja it runs
-[HelixScreen](https://github.com/prestonbrown/helixscreen) 1.0.6, a Klipper touch UI talking
+[HelixScreen](https://github.com/prestonbrown/helixscreen) 1.0.8, a Klipper touch UI talking
 to the local Moonraker. It knows the Kobra S1 (printer preset and image) and finds heaters,
 fans, sensors and the probe by itself. How it was chosen and brought up:
 [history/display-ui-log.md](history/display-ui-log.md).

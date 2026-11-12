@@ -12,6 +12,7 @@ db529220c22160b952e5a047b59f3fd862a19e20b7b422b6b5e8f1925a168402  kobra_macros.c
 c1d486b93fa402a615acf8da7e56bf49693c859bfbce80495cd04c4150a23056  kobra_peripherals.cfg
 # mainsail.cfg is a symlink to client.cfg upstream: the sum of client.cfg's content
 1025f5596d828fc5ac3723885b1d747654b4fd5fd6c25219f3ab26f95157f73b  mainsail.cfg
+29d4c97b099e481c25c0a875b3f0696850a6aafa67775aee8d05e8682352ffb4  mainsail.cfg
 # development images before the public repository (2026-10-21)
 92f624d458829a9a6b2f3cdd20490e73f33f4ad480e0203ab52451fd53c43123  kobra_macros.cfg
 95ae9a535982495ec488d3293197d0888f6143d4bc0964c4751971bc39af18ad  kobra_macros.cfg

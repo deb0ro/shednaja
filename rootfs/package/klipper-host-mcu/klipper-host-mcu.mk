@@ -7,7 +7,7 @@
 # Same source tarball as the klipper package, so klippy and klipper_mcu always speak
 # the same protocol (and the download is shared). This file is parsed before
 # klipper.mk, so the version is repeated here; the build checks that they match.
-KLIPPER_HOST_MCU_VERSION = 45f35e8cd5cab6b369e0467d995012dcacb805bd
+KLIPPER_HOST_MCU_VERSION = 880188ba35600c57e60865192a494dd5af88f809
 KLIPPER_HOST_MCU_SITE = https://github.com/Kobra-S1/klipper-kobra-s1.git
 KLIPPER_HOST_MCU_SITE_METHOD = git
 KLIPPER_HOST_MCU_DL_SUBDIR = klipper
