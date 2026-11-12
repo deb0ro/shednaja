@@ -4,14 +4,14 @@
 #
 ################################################################################
 
-KLIPPER_VERSION = 45f35e8cd5cab6b369e0467d995012dcacb805bd
+KLIPPER_VERSION = 880188ba35600c57e60865192a494dd5af88f809
 KLIPPER_SITE = https://github.com/Kobra-S1/klipper-kobra-s1.git
 KLIPPER_SITE_METHOD = git
 KLIPPER_LICENSE = GPL-3.0
 KLIPPER_LICENSE_FILES = COPYING
 KLIPPER_DEPENDENCIES = python3 host-python3
 # git describe --tags --long of the pinned commit (klippy reads klippy/.version)
-KLIPPER_DESCRIBE = V1.3.1-51-g45f35e8c
+KLIPPER_DESCRIBE = V1.3.1-54-g880188ba
 
 KLIPPER_CHELPER = $(@D)/klippy/chelper
 

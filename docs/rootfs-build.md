@@ -53,11 +53,11 @@ bash rootfs/tests/offline_check.sh    # optional, see "Offline checks"
 
 | Component | Version / source | Notes |
 |---|---|---|
-| Klipper (klippy) | Kobra-S1/klipper-kobra-s1 @ `45f35e8c` (`V1.3.1-51-g45f35e8c`) | `rootfs/package/klipper`: `c_helper.so` cross-compiled, `.pyc` precompiled; patches: never rebuild chelper on a read-only install, no "recompile and flash" warning for the Anycubic MCU firmware |
+| Klipper (klippy) | Kobra-S1/klipper-kobra-s1 @ `880188ba` (`V1.3.1-54-g880188ba`) | `rootfs/package/klipper`: `c_helper.so` cross-compiled, `.pyc` precompiled; patches: never rebuild chelper on a read-only install, no "recompile and flash" warning for the Anycubic MCU firmware |
 | Klipper Linux MCU | same source, `CONFIG_MACH_LINUX` | `klipper-host-mcu`: host pins (light, buzzer) as `[mcu host]` |
-| Moonraker | Arksine/moonraker v0.11.0 | |
-| Mainsail, mainsail.cfg | 2.19.0, mainsail-config v1.2.1 | |
-| HelixScreen | 1.0.6, official static armv7 build (`ad5m`) | pruned assets; [display-ui.md](display-ui.md) |
+| Moonraker | Arksine/moonraker v0.11.0-4-gb559b9a | |
+| Mainsail, mainsail.cfg | 2.19.0, mainsail-config v1.2.1+1 (`ff3869a6`) | |
+| HelixScreen | 1.0.8, official static armv7 build (`ad5m`) | pruned assets; [display-ui.md](display-ui.md) |
 | mjpg-streamer | Buildroot (jacksonliam `5a6e0a2`) | `kobra-webcam`: only `input_uvc` + `output_http` |
 | numpy | 1.23.5 (`kobra-numpy`) | for `SHAPER_CALIBRATE`; Buildroot's numpy needs glibc/musl, ours adds an ARM `fenv.h` and a uClibc patch |
 | ACEPRO | Kobra-S1/ACEPRO V0.8.1 (`kobra-acepro`) | packaged, **inactive**; [peripherals.md](peripherals.md#ace-pro) |

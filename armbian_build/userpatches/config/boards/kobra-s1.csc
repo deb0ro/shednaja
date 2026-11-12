@@ -26,7 +26,7 @@ PACKAGE_LIST_BOARD="wpasupplicant iw udhcpc systemd-timesyncd dropbear openssh-s
 # Pin the vendor kernel to the commit our DTS and the rtl8723ds patch were checked against
 # (the family follows the branch head of rk-6.1-rkr7.2). Bump together with sources/.
 function post_family_config_branch_vendor__kobra_s1_pin_kernel() {
-	declare -g KERNELBRANCH='commit:d3d527fca68e0db93aa802692e82b9e3b10cef8d'
+	declare -g KERNELBRANCH='commit:fe9944f83189a6c2e07e2eee5f24e60a1241b628'
 }
 
 # Last changes to the image, after Armbian wrote /etc/fstab and enabled its services

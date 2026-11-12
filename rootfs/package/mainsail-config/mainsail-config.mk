@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-# the commit of tag v1.2.1, pinned by hash: a tag can be moved upstream. A new version
+# tag v1.2.1 plus one commit (the _CLIENT_LINEAR_MOVE macro), pinned by hash. A new version
 # needs the sha256 of its mainsail.cfg in board/kobra_s1/klipper_config/known-versions.sha256.
-MAINSAIL_CONFIG_VERSION = e57810d51b5c634aadaca4db923bfcba269ae4b3
+MAINSAIL_CONFIG_VERSION = ff3869a621db17ce3ef660adbbd3fa321995ac42
 MAINSAIL_CONFIG_SITE = https://github.com/mainsail-crew/mainsail-config.git
 MAINSAIL_CONFIG_SITE_METHOD = git
 MAINSAIL_CONFIG_LICENSE = GPL-3.0
