@@ -3,15 +3,16 @@
 
     python tools/make_update_splash.py [--test out.bgra.gz]
 
-Writes rootfs/board/kobra_s1/overlay/usr/share/shednaja/splash/{updating,done,failed}.fb.gz:
-raw frames for /dev/fb0 (800x480, 32 bpp, B,G,R,X byte order, gzip), shown by
-update-stage2 / update-writer with "zcat <file> > /dev/fb0".
+Writes {updating,done,failed}.fb.gz per variant: raw frames for /dev/fb0 (800x480, 32 bpp,
+B,G,R,X byte order, gzip), shown with "zcat <file> > /dev/fb0".
+  Lite:    rootfs/board/kobra_s1/overlay/usr/share/shednaja/splash/ (update-stage2 / update-writer)
+  Armbian: armbian_build/stack/splash/ (kobra-update; install-stack.sh puts them into
+           /usr/share/shednaja/splash)
 Also writes the logo U-Boot and the kernel show from power-on until HelixScreen starts
 (logo.bmp / logo_kernel.bmp in the boot.img resource, put there by tools/mkboot_kernel.py
 --logo), one per variant: kernel/logo/boot_logo.bmp for Lite (tools/build_kernel.sh) and
 kernel/logo/boot_logo_armbian.bmp for Armbian (armbian_build/scripts/pack_boot.sh). Same
 format as the stock logo: 800x480, 8 bit with a palette, uncompressed BMP.
-The update screens are Lite's only (update-stage2 / update-writer).
 The panel is mounted upside down relative to fb0 (HelixScreen runs with --rotate=180, the
 stock logo is stored upside down too), so everything is rotated by 180 degrees.
 Needs Pillow and a TrueType font (DejaVu Sans or Segoe UI).
@@ -23,12 +24,16 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "rootfs", "board", "kobra_s1", "overlay", "usr", "share",
-                   "shednaja", "splash")
+SPLASH_DIRS = {
+    "lite": os.path.join(ROOT, "rootfs", "board", "kobra_s1", "overlay", "usr", "share",
+                         "shednaja", "splash"),
+    "armbian": os.path.join(ROOT, "armbian_build", "stack", "splash"),
+}
 LOGO_DIR = os.path.join(ROOT, "kernel", "logo")
-NAME = "ShedNaja Lite"	# shown on every update screen and on Lite's boot logo
-# boot logo per variant: file, name
-BOOT_LOGOS = {"lite": ("boot_logo.bmp", NAME), "armbian": ("boot_logo_armbian.bmp", "ShedNaja")}
+# shown on every update screen and on the boot logo
+NAMES = {"lite": "ShedNaja Lite", "armbian": "ShedNaja"}
+# boot logo per variant
+BOOT_LOGOS = {"lite": "boot_logo.bmp", "armbian": "boot_logo_armbian.bmp"}
 W, H = 800, 480
 BG = (16, 20, 26)
 FG = (235, 238, 242)
@@ -44,6 +49,10 @@ SCREENS = {
     "failed": ((235, 80, 70), "Update failed",
                "The new firmware could not be verified.",
                "Restarting into the stock firmware."),
+    # Armbian installs next to the running system: a failed install changes nothing
+    "failed-armbian": ((235, 80, 70), "Update failed",
+                       "The new firmware could not be installed.",
+                       "The printer keeps running the current system."),
     "test": ((255, 200, 0), "TOP LEFT  - test",
              "Red  Green  Blue squares below.",
              "If this reads upside down, the rotation is wrong."),
@@ -62,15 +71,15 @@ def font(size, bold=False):
     sys.exit("no TrueType font found (install DejaVu Sans)")
 
 
-def render(name):
-    accent, title, line1, line2 = SCREENS[name]
+def render(name, variant="lite"):
+    accent, title, line1, line2 = SCREENS.get(name + "-" + variant, SCREENS[name])
     im = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(im)
     d.rectangle([0, 0, W, 10], fill=accent)
     d.text((W // 2, 170), title, font=font(46, True), fill=FG, anchor="mm")
     d.text((W // 2, 245), line1, font=font(24), fill=DIM, anchor="mm")
     d.text((W // 2, 285), line2, font=font(24), fill=DIM, anchor="mm")
-    d.text((W // 2, 440), NAME, font=font(18), fill=DIM, anchor="mm")
+    d.text((W // 2, 440), NAMES[variant], font=font(18), fill=DIM, anchor="mm")
     if name == "test":
         d.text((10, 20), "TL", font=font(30, True), fill=FG)
         for i, c in enumerate([(255, 0, 0), (0, 255, 0), (0, 0, 255)]):
@@ -82,7 +91,7 @@ def render(name):
 
 
 def render_boot_logo(variant):
-    file, name = BOOT_LOGOS[variant]
+    file, name = BOOT_LOGOS[variant], NAMES[variant]
     path = os.path.join(LOGO_DIR, file)
     im = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(im)
@@ -106,11 +115,12 @@ def main():
     if len(sys.argv) == 3 and sys.argv[1] == "--test":
         open(sys.argv[2], "wb").write(render("test"))
         return
-    os.makedirs(OUT, exist_ok=True)
-    for name in ("updating", "done", "failed"):
-        data = render(name)
-        open(os.path.join(OUT, name + ".fb.gz"), "wb").write(data)
-        print("%s.fb.gz %d B" % (name, len(data)))
+    for variant, out in SPLASH_DIRS.items():
+        os.makedirs(out, exist_ok=True)
+        for name in ("updating", "done", "failed"):
+            data = render(name, variant)
+            open(os.path.join(out, name + ".fb.gz"), "wb").write(data)
+            print("%s %s.fb.gz %d B" % (variant, name, len(data)))
     for variant in BOOT_LOGOS:
         print("%s %d B" % render_boot_logo(variant))
 

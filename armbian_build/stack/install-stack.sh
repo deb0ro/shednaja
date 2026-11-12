@@ -103,6 +103,9 @@ h=$(cat "$S/root.hash"); usermod -p "$h" root
 install -d /usr/share/shednaja
 grep '^root:' /etc/shadow > /usr/share/shednaja/shadow.default; chmod 600 /usr/share/shednaja/shadow.default
 install -m 0644 "$L"/profile.d/shednaja-password.sh /etc/profile.d/
+# update screens kobra-update shows on the display (tools/make_update_splash.py, Armbian variant)
+install -d /usr/share/shednaja/splash
+install -m 0644 "$S"/splash/*.fb.gz /usr/share/shednaja/splash/
 ln -sfn /usr/local/sbin/kobra-abctl /usr/sbin/kobra-abctl     # kobra_slot.py calls /usr/sbin/kobra-abctl
 install -m 0644 "$L/etc/lighttpd.conf" /etc/lighttpd/lighttpd.conf
 # printer_data defaults and the shipped Klipper config (rootfs/board/kobra_s1/post-build.sh)

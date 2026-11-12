@@ -417,3 +417,22 @@ path, stock slot, `userdata`, the existing data on `useremain` and the MCU firmw
   webcam snapshot 200, host key, `authorized_keys` and root hash carried over, MemAvailable 152 MB.
   No motion tested. **Lite** reads the same `.mk` pins: it needs a release build and a retest with
   them (not built).
+- 2026-11-12, **update screens on the display.** Before, only Lite's handover drew them: on Armbian
+  HelixScreen kept its normal UI for the 3 min install, then the printer just rebooted. Now
+  `kobra-update` (Armbian path) stops HelixScreen and its watchdog, unblanks and pans fb0 and shows
+  "Updating firmware"; "Update complete" 3 s before the reboot; "Update failed" on an error or a
+  signal (EXIT trap), then HelixScreen back. Armbian has its own frames (`armbian_build/stack/splash`,
+  footer "ShedNaja", failed: "The printer keeps running the current system"). Checked by sampling
+  fb0's md5 every 2 s against the frames:
+  - SSH (`kobra-update` hot-copied into the running root first): updating at the start of the
+    install, done before the reboot, new root confirmed.
+  - Interrupted install (`systemctl stop kobra-update` during `kobra-ab install`): failed, HelixScreen
+    back. The first try found `"$2"` unset under `set -u` (HelixScreen stayed off), fixed with `${2:-}`.
+    The partial `root_b.new` it left made the next run 4 MB short of space; removed by hand.
+  - Mainsail (upload through Moonraker into `config/updates`, `_SHEDNAJA_UPDATE CONFIRM=1` as the
+    dialog's Install button sends): updating, done, reboot into `armbian-afe4a313d4ff` (the image
+    with the screens built in), confirmed, no failed units, MemAvailable 152 MB.
+  - USB stick at boot: not tested yet (needs the user).
+  `apt.armbian.com` answered 502 during the build: this image was built with
+  `LOCAL_MIRROR=mirrors.dotsrc.org/armbian-apt` (Armbian's official mirror), so its armbian.sources
+  points there. The next normal build goes back to apt.armbian.com.
